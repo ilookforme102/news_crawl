@@ -1,123 +1,220 @@
 import requests 
 import time
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup,NavigableString
 
-#main functions
-def is_element_exist():
-    try:
-        driver.find_element(By.CLASS_NAME, 'view-more-detail.clearboth').find_element(By.TAG_NAME,'a')
-        return True
-    except NoSuchElementException:
-        return False
-def is_element_display():
-    return driver.find_element(By.CLASS_NAME, 'view-more-detail.clearboth').find_element(By.TAG_NAME,'a').is_displayed()
-
-def smooth_scroll_to_bottom(delay):
-    last_height = driver.execute_script("return document.body.scrollHeight")
-
-    while True:
-        # Scroll down to the bottom.
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-        # Wait for the page to load.
-        time.sleep(delay)
-
-        # Calculate new scroll height and compare with last scroll height.
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
-def readmore_click():
-    while is_element_display()==False:
-        smooth_scroll_to_bottom(delay=4)
-        warapper = driver.find_element(By.CLASS_NAME,'kbwcb-left-wrapper')
-        last_post_date_string = warapper.find_elements(By.CLASS_NAME,'knswli-time')[-1].get_attribute('title')
-        datetime_obj = datetime.fromisoformat(last_post_date_string)
-        if is_element_display():
-            if datetime_obj >= datetime(2023, 11, 11, 0, 0, 0):
-                driver.find_element(By.CLASS_NAME, 'view-more-detail.clearboth').find_element(By.TAG_NAME,'a').click()
-            else:
-                break
-def get_url_list(category_url):
-    driver.get(category_url)
-    url_list = []
-    readmore_click()
-    warapper  = driver.find_element(By.CLASS_NAME,'kbwcb-left-wrapper')
-    list_elements = warapper.find_elements(By.CLASS_NAME,'knswli.need-get-value-facebook.clearfix.done-get-type.done-get-sticker')
-    for i in range(0,len(warapper.find_elements(By.CLASS_NAME,'knswli-time'))):
-        if datetime.fromisoformat(driver.find_elements(By.CLASS_NAME,'knswli-time')[i].get_attribute('title')) >= datetime(2023, 9, 1, 0, 0, 0):
-            src = list_elements[i].find_element(By.TAG_NAME,'h3').find_element(By.TAG_NAME,'a').get_attribute('href')
-            url = src 
-            print(url)
-            url_list.append(url)
-    return url_list     
-def add_url_list(_kenh14):
-    for i in list(_kenh14['urls'].keys()):
-        for j in _kenh14['urls'][i]:
-            for v in list(_kenh14['urls'][i]['sub-category'].keys()):
-                cat_url =  _kenh14['urls'][i]['sub-category'][v]['url']
-                _kenh14['urls'][i]['sub-category'][v]['url_list'] = get_url_list(cat_url)
+def convert_string(input_str):
+    # Extract the date part using regular expression
+    pattern = r'\d{2}/\d{2}/\d{4}'
+    date_part = re.search(pattern, input_str).group()
+    match = re.search(pattern, input_str)
+    if match:
+        # Parse the date string into a datetime object
+        date_obj = datetime.strptime(date_part, '%d/%m/%Y')
+        formatted_date = date_obj.strftime('%Y-%m-%d')
+        return formatted_date
+    else:
+        return ""
+# return the expected content in html format
+def get_content_kenh14(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    article =  soup.find('div', class_ = "klw-new-content")
+    children = article.find_all(recursive=False)
+    related_news =  article.find('div', class_ = 'knc-relate-wrapper relationnews')
+    related_news.decompose()
+    for i in children[-6:]:
+        i.decompose() 
+    caption_text_list =article.find_all( class_="PhotoCMS_Caption")
+    img_list = article.find_all(['img','video'])[:-1]
+    n_img = len(img_list)
+    for i in range(0,n_img):
+        caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
+        caption_text = NavigableString(caption_text_list[i].text)
+        caption_end = NavigableString("[/caption]")
+        caption_text_list[i].decompose()
+            # Insert the custom tags and caption text around the <img> tag
+        img_list[i].insert_before(caption_start)
+        img_list[i].insert_after(caption_end)
+        try:
+            img_list[i].insert_after(caption_text) 
+        except IndexError as e:
+            print(e)        #print(len(caption_text_list))
+    for script_or_style in article(['script', 'style']):
+            script_or_style.decompose() 
+    for i in article.find_all(recursive = True):
+        try:
+            del i['onclick']
+            del i['id']
+            del i['class']
+            del i['style']
+        except AttributeError:
+            continue
+        except TypeError:
+            continue            
+    tags_to_remove = article.find_all(['a', 'span'])
+    for tag in tags_to_remove:
+        # Extract the text from the tag
+        tag_text = tag.get_text()
+            # Replace the tag with its text content
+        tag.replace_with(tag_text)
+        tag.text.strip() 
+    for i in article.find_all('img'):
+        i['class'] = "aligncenter"
+        i['width'] = 800
+        i['height'] = 400
+    source_tag = soup.new_tag('i') 
+    source_tag.string = "Nguồn: kenh14.vn"  # Set the content of <i> tag
+    # Append the <i> tag as the last child of the <article> tag
+    article.append(source_tag)
+    for i in article.find_all('div', {'align': 'center'}):
+        i.decompose()
+    for element in article.find_all(recursive = True,string=True):
+        if isinstance(element, NavigableString) and element.strip() == '':
+            element.extract()
+    #remove element withou child element or have children element which is empty
+    for i in article.find_all(recursive = True):
+        if i.children == None and i.string == None:
+            i.decompose()
+    for i in article.find_all(recursive = True):
+        try:
+            i.text.trip()
+        except AttributeError as e:
+            continue
+    return article
 def get_post(url):
     try:
         response = requests.get(url)
-        time.sleep(3)
+        time.sleep(5)
         soup = BeautifulSoup(response.content, 'html5lib')
-        parent_div = soup.find('div', id = 'k14-detail-content').find('div',class_ ='knc-content')
-        post_time = soup.find('span', class_ ='kbwcm-time')['title']
+        content = get_content_kenh14(url)
+        post_time = soup.find('span', class_ = 'kbwcm-time').text.strip()
+        published_date = convert_string(post_time)
         title = soup.find('h1').text.strip()
-        h2 = soup.find('h2').text.strip()
-        #images_src = [i.attrs['src'] for i in soup.find('article', class_= 'cate-24h-foot-arti-deta-info').find_all('img')[:-1] if 'svg' not in i.attrs['src']]
-        images_src = [img['data-original'] for img in parent_div.find_all('img')]
-        text_list = [ child.text.strip() for child in parent_div if child.text.strip() != ""]
-        text_list = [h2] + text_list
-        print(url)
-        return text_list, images_src,title,post_time
+        return content,title,published_date
     except AttributeError as e:
         print(e)
-        text_list = ''
-        images_src = ''
-        title= ''
-        post_time =''
-        return text_list, images_src,title,post_time                
-def add_post():
-    for i in list(_kenh14['urls'].keys()):
-        for j in _kenh14['urls'][i]:
-            for v in list(_kenh14['urls'][i]['sub-category'].keys()):
-                n_post = len(_kenh14['urls'][i]['sub-category'][v]['url_list'])
-                _kenh14['urls'][i]['sub-category'][v]['content'] = {}
-                for item in range(0,n_post):
-                    post_url = _kenh14['urls'][i]['sub-category'][v]['url_list'][item]
-                    _kenh14['urls'][i]['sub-category'][v]['content'][item]['text_list'],_kenh14['urls'][i]['sub-category'][v]['content'][item]['images_src'],_kenh14['urls'][i]['sub-category'][v]['content'][item]['title'],_kenh14['urls'][i]['sub-category'][v]['content'][item]['post_time'] = getpost(post_url)   
+def convert_time_string(posted_date):
+    pattern = r'\d{2}/\d{2}/\d{4}'
+    match = re.search(pattern, posted_date)
 
-def main():
-    driver = uc.Chrome(headless = True, use_subprocess=False,version_main=119)#, user_data_dir = "c:\temp\profile")#, version_main=117)
+    if match:
+        date_string = match.group()
+
+        # Convert to datetime object
+        datetime_obj = datetime.strptime(date_string, "%d/%m/%Y")
+        return datetime_obj
+    else:
+        return ''
+def get_list_url(cate_url):
+    response = requests.get(cate_url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    list_url = soup.find('div', attrs = {'data-marked-zoneid':'kenh14_detail_d3'}).find_all('li')
+    list = []
+    for i in list_url:
+        try:
+            path = i.find('a')['href']
+            url = 'https://kenh14.vn'+ path
+            list.append(url)
+        except TypeError:
+            continue
+    return list
+def filter_list(urls):
+    filtered_urls = []
+    crawl_time = datetime.fromtimestamp(time.time())
+    for i in urls:
+        response = requests.get(i)
+        soup = BeautifulSoup(response.content, 'html5lib')
+        try:
+            date_posted = soup.find('span', class_ = 'kbwcm-time').text.strip()
+            date_posted_norm = convert_time_string(date_posted)
+            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+                filtered_urls.append(i)
+                print(i)
+        except AttributeError as e:
+            print(e)
+            break
+    return filtered_urls
+def add_list(web_json_obj):
+    for i in list(web_json_obj['urls'].keys()):
+        for j in list(web_json_obj['urls'][i]['sub-category'].keys()):  
+            urls = get_list_url(web_json_obj['urls'][i]['sub-category'][j]['url'])
+            print(i,j,web_json_obj['urls'][i]['sub-category'][j]['url'])
+            web_json_obj['urls'][i]['sub-category'][j]['url_list'] = filter_list(urls)
+
+def add_post(web_json_obj):
+    for i in list(web_json_obj['urls'].keys()):
+        for j in list(web_json_obj['urls'][i]['sub-category'].keys()):
+            web_json_obj['urls'][i]['sub-category'][j]['content'] = {}
+            list_key = [v for v in range(0,len(web_json_obj['urls'][i]['sub-category'][j]['url_list']))]
+            for u in list_key:
+                web_json_obj['urls'][i]['sub-category'][j]['content'][u] = {}
+                if u != "":
+                    web_json_obj['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
+                    print(i,j,web_json_obj['urls'][i]['sub-category'][j]['cate_id'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
+                
+def get_news_kenh14():
     _kenh14 = {
-        "home_page":"https://kenh14.vn/",
-        "urls":{
-            "sport":
-            {
-             "url":"https://kenh14.vn/sport.chn",
-             "sub-category":{
-                0:{
-                    "name":"Bóng đá",
-                     "url":"https://kenh14.vn/sport/bong-da.chn",
-                     "url_list" : []},
-                1:{"name":"Hậu trường",
-                 "url":"https://kenh14.vn/sport/hau-truong.chn",
-                  "url_list" : []},
-                2:{"name":"Esports",
-                 "url":"https://kenh14.vn/sport/esports.chn",
-                  "url_list" : []}
-             }
+            "home_page":"https://kenh14.vn/",
+            "urls":{
+                "sport":
+                {
+                 "url":"https://kenh14.vn/sport.chn",
+                 "sub-category":{  
+                    0:{"name":"Hậu trường",
+                     "url":"https://kenh14.vn/sport/hau-truong.chn",
+                     "cate_id":38,
+                      "url_list" : []},
+                    1:{"name":"Esports",
+                     "url":"https://kenh14.vn/sport/esports.chn",
+                     "cate_id":61,
+                      "url_list" : []}
+                 }
+                }
             }
         }
-    }
-    add_url_list(_kenh14)
-    driver.quit()
+#
+    add_list(_kenh14)
     add_post(_kenh14)
-    #add_post()
-    return _kenh14                       
+    return _kenh14
+def send_post_to_5goals(title,content,category_id,published_date):
+    # URL of the API endpoint (this is a placeholder and needs to be replaced with the actual URL)
+    url = "https://api2023.5goal.com/wp-json/custom/createPost"
+    
+    # Data to be sent in the POST request
+    data = {
+        "title": title,
+        "content": content,
+        "category_id": category_id,
+        "token": '5goalvodichcmnl',  # Replace with your actual access token
+        "published_date": published_date,
+        "domain":"kenh14"
+          # Replace with the actual category ID as required
+    }
+    
+    # Sending the POST request
+    response = requests.post(url, data=data)
+    
+    # Checking the response
+    if response.status_code == 200:
+        print("The post was successfully created.")
+        print("Response:", response.text)  # Prints the response text from the server
+    else:
+        print(f"Failed to create the post. Status code: {response.status_code}")
+def main():
+    _kenh14 = get_news_kenh14()
+    for i in list(_kenh14['urls'].keys()):
+    #web_24h_com_vn2['url'][i]['cate_id']
+        for j in list(_kenh14['urls'][i]['sub-category']):
+            url_list =  _kenh14['urls'][i]['sub-category'][j]['url_list']
+            for t in range(0,len(url_list)):
+                content = _kenh14['urls'][i]['sub-category'][j]['content'][t]['text']
+                title = _kenh14['urls'][i]['sub-category'][j]['content'][t]['title']
+                published_date = _kenh14['urls'][i]['sub-category'][j]['content'][t]['published_date']
+                cate_id = _kenh14['urls'][i]['sub-category'][j]['cate_id']
+                send_post_to_5goals(title,str(content), cate_id, published_date)
+                time.sleep(5)
+    return _kenh14
+if __name__ == '__main__':
+    main()

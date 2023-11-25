@@ -42,14 +42,14 @@ def get_content(url):
     n_img = len(img_list)
     #print(len(caption_text_list))
     for i in range(0,n_img):
-        caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
-        caption_text = NavigableString(caption_text_list[i].string)
-        caption_end = NavigableString("[/caption]")
-        caption_text_list[i].decompose()
-        # Insert the custom tags and caption text around the <img> tag
-        img_list[i].insert_before(caption_start)
-        img_list[i].insert_after(caption_end)
         try:
+            caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
+            caption_text = NavigableString(caption_text_list[i].string)
+            caption_end = NavigableString("[/caption]")
+            caption_text_list[i].decompose()
+            # Insert the custom tags and caption text around the <img> tag
+            img_list[i].insert_before(caption_start)
+            img_list[i].insert_after(caption_end)
             img_list[i].insert_after(caption_text) 
         except IndexError as e:
             print(e)
@@ -102,7 +102,7 @@ def get_content(url):
     for element in article.find_all(recursive = True,string=True):
         if isinstance(element, NavigableString) and element.strip() == '':
             element.extract()
-    for i in test.find_all('div'):
+    for i in article.find_all('div'):
         if i.children == None and i.string == None:
             i.decompose()
     return str(article)
@@ -207,10 +207,6 @@ def add_post(web_24h_com_vn):
                 
 
 
-
-
-
-
 def get_news():
     web_24h_com_vn = {
         "home_page":"https://www.24h.com.vn/",
@@ -302,7 +298,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
     # Checking the response
     if response.status_code == 200:
         print("The post was successfully created.")
-        print("Response:", response.text)  # Prints the response text from the server
+        print("Response:", title, response.text)  # Prints the response text from the server
     else:
         print(f"Failed to create the post. Status code: {response.status_code}")
 def main():
