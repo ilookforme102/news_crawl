@@ -110,7 +110,7 @@ def get_post(url):
     try:
         content,title,published_date = get_content_thethaovanhoa(url)
         return content,title,published_date
-    except AttributError as e:
+    except AttributeError as e:
         print(e)
 def get_list_url(cate_url): 
     response = requests.get(cate_url)
@@ -125,7 +125,7 @@ def get_list_url(cate_url):
             url = 'https://thethaovanhoa.vn' + path['href']
             urls.append(url)
         except TypeError as e:
-            continue
+            print(e)
     return urls
 def filter_list(urls):
     filtered_urls = []
@@ -195,7 +195,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "category_id": category_id,
         "token": '5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
-        "domain":"bongdaplus"
+        "domain":"thethaovanhoa"
           # Replace with the actual category ID as required
     }
     

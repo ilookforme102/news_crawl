@@ -2,7 +2,7 @@ import requests
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString, Comment
+from bs4 import BeautifulSoup,NavigableString, Comment 
 #convert time string to the right format
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
@@ -137,7 +137,7 @@ def get_post(url):
     try:
         content,title,published_date = get_content_bongdaplus(url)
         return content,title,published_date
-    except AttributError as e:
+    except AttributeError as e:
         print(e)
 def get_list_url(cate_url):
     response = requests.get(cate_url)

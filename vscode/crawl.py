@@ -83,8 +83,6 @@ def get_content(url):
             del i['style']
         except AttributeError:
             continue
-        try:
-            print(i)
         except TypeError:
             continue
     for i in article.find_all('img'):
@@ -156,7 +154,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time())
+    crawl_time = datetime.fromtimestamp(time.time() - 3*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
