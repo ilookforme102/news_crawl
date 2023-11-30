@@ -169,7 +169,7 @@ def filter_list(urls):
                 print(i)
         except AttributeError as e:
             print(e)
-            break
+            continue
     return filtered_urls
 def add_list(web_json_obj):
     for i in list(web_json_obj['urls'].keys()):

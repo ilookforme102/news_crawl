@@ -9,7 +9,7 @@ import html5lib
 
 def get_content(url):
     response = requests.get(url)
-    soup = BeautifulSoup(response.content,  features='html')
+    soup = BeautifulSoup(response.content,  features="html5lib")
 
     #remove the last 4 element
     article = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info')
@@ -134,7 +134,7 @@ def get_post(url):
     try:
         response = requests.get(url)
         time.sleep(3)
-        soup = BeautifulSoup(response.content, 'html5lib')
+        soup = BeautifulSoup(response.content, features="html5lib")
         content = get_content(url)
         post_time = soup.find('time').text.strip()
         published_date = convert_string(post_time)
@@ -154,7 +154,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 3*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -166,7 +166,7 @@ def filter_list(urls):
                 print(i)
         except AttributeError as e:
             print(e)
-            break
+            continue
     return filtered_urls
 def get_list_url(cat_url):
     urls = []

@@ -122,7 +122,7 @@ def get_list_url(cate_url):
     return list
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 4*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -134,7 +134,7 @@ def filter_list(urls):
                 print(i)
         except AttributeError as e:
             print(e)
-            break
+            continue
     return filtered_urls
 def add_list(web_json_obj):
     for i in list(web_json_obj['urls'].keys()):
