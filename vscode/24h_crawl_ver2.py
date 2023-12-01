@@ -1,3 +1,4 @@
+
 #importing library
 from bs4 import BeautifulSoup,NavigableString
 import requests
@@ -5,8 +6,6 @@ import time
 import re
 from datetime import datetime
 import html5lib
-
-
 def get_content(url):
     response = requests.get(url)
     time.sleep(3)
@@ -14,7 +13,8 @@ def get_content(url):
     try:
         #remove the last 4 element
         article = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info')
-        
+        for script_or_style in article(['script', 'style']):
+            script_or_style.decompose()
         children = article.find_all(recursive=False)
         for i in children[-4:]:
             i.decompose()
@@ -22,11 +22,12 @@ def get_content(url):
         #find a,span and remove tag with text
         tags_to_remove = article.find_all(['a', 'span'])
         for tag in tags_to_remove:
-            # Extract the text from the tag
-            tag_text = tag.get_text()
-            # Replace the tag with its text content
-            tag.replace_with(tag_text)
-            tag.text.strip()
+            if tag.text !=  '':
+                # Extract the text from the tag
+                tag_text = tag.get_text()
+                # Replace the tag with its text content
+                tag.replace_with(tag_text)
+                tag.text.strip()
         # set attribut for img
         b = article.find_all('img')
         for i in b:
@@ -39,34 +40,30 @@ def get_content(url):
             del i['onclick']
             del i['style']
             del i['class']
-            
-            
-            #print(n_img)
-    
         img_list = article.find_all('img')
         n_img = len(img_list)
         #print(len(caption_text_list))
         for i in range(0,n_img):
             try:
+                # Create NavigableString objects for the custom caption tags
                 caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
-                caption_text = NavigableString(caption_text_list[i].string)
                 caption_end = NavigableString("[/caption]")
-                caption_text_list[i].decompose()
-                # Insert the custom tags and caption text around the <img> tag
+                try:
+                    caption_text = NavigableString(caption_text_list[i].get_text())
+                except IndexError:
+                    caption_text = ''
+                # Insert the caption start tag before the <img> tag
                 img_list[i].insert_before(caption_start)
+                # Insert the caption end tag after the <img> tag
                 img_list[i].insert_after(caption_end)
-                img_list[i].insert_after(caption_text) 
+                img_list[i].insert_after(caption_text)
+                # Wrap the entire structure (caption start, img, caption end) in a new tag if needed
+                # For example, wrapping in a <div>
+                new_div = soup.new_tag("div")
+                caption_start.wrap(new_div)
+                caption_text_list[i].decompose()
             except IndexError as e:
                 print(e)
-                #create caption
-                
-            #print(i.attrs.keys())"""
-        #remove js  and css
-        h2 = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info').find('h2')
-        #soup2 = BeautifulSoup("", 'html.parser')
-        #soup2.append(h2)
-        for script_or_style in article(['script', 'style']):
-            script_or_style.decompose()
         for i in article.find_all(recursive = True):
             try:
                 del i['onclick']
@@ -75,8 +72,6 @@ def get_content(url):
                 del i['style']
             except AttributeError:
                 continue
-            #try:
-                #print(i)
                 
             except TypeError:
                 continue
@@ -92,7 +87,7 @@ def get_content(url):
     
     # Append the <i> tag as the last child of the <article> tag
         article.append(source_tag)
-    except AttributeError as e:
+    except (AttributeError, IndexError, TypeError):
         try:
             article = soup.find('div', id= 'magazine_news')
             videos = article.find_all('div', class_ = 'videoUpload24h')
@@ -137,8 +132,6 @@ def get_content(url):
                     del i['style']
                 except AttributeError:
                     continue
-                #try:
-                    #print(i)
                     
                 except TypeError:
                     continue
@@ -187,7 +180,7 @@ def get_post(url):
     try:
         response = requests.get(url)
         time.sleep(3)
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, 'html5lib')
         content = get_content(url)
         post_time = soup.find('time').text.strip()
         published_date = convert_string(post_time)
@@ -202,7 +195,7 @@ def get_post(url):
         try:
             response = requests.get(url)
             time.sleep(3)
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html5lib')
             content = get_content(url)
             post_time = soup.find('div', class_ = 'magazine_event_date').text.strip()
             published_date = convert_string(post_time)
@@ -216,7 +209,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 4*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 7*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -234,7 +227,7 @@ def get_list_url(cat_url):
     urls = []
     response = requests.get(cat_url)
     time.sleep(3)
-    soup = BeautifulSoup(response.content,'html.parser')
+    soup = BeautifulSoup(response.content,'html5lib')
     try:
         news_block  = soup.find('section', id = 'tin_bai_noi_bat_khac')
         try:
@@ -282,8 +275,8 @@ def add_post(web_24h_com_vn):
                 if u != "":
                     web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['title'],web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_24h_com_vn['urls'][i]['sub-category'][j]['url_list'][u])
                     print(i,j,web_24h_com_vn['urls'][i]['cate_id'],web_24h_com_vn['urls'][i]['sub-category'][j]['name'],web_24h_com_vn['urls'][i]['sub-category'][j]['name'],web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['title'],web_24h_com_vn['urls'][i]['sub-category'][j]['url_list'][u])
+                
 
-    return web_24h_com_vn
 def get_news():
     web_24h_com_vn = {
         "home_page":"https://www.24h.com.vn/",
@@ -376,6 +369,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
     if response.status_code == 200:
         print("The post was successfully created.")
         print("Response:", response.text)  # Prints the response text from the server
+        
     else:
         print(f"Failed to create the post. Status code: {response.status_code}")
 def main():
@@ -390,7 +384,10 @@ def main():
                 published_date = web_24h_com_vn['urls'][i]['sub-category'][j]['content'][t]['published_date']
                 cate_id = web_24h_com_vn['urls'][i]['cate_id']
                 send_post_to_5goals(title,text,cate_id,published_date)
-                time.sleep(2)
-    return web_24h_com_vn
+                print("title: ", title, "\n")
+                print("date: ", published_date, "\n")
+                print("id: ", cate_id, "\n")
+                #print(url_list[t],title, cate_id, published_date,text)
+                #return web_24h_com_vn
 if __name__ == '__main__':
     main()
