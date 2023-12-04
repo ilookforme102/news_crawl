@@ -1,6 +1,6 @@
 
 #importing library
-from bs4 import BeautifulSoup,NavigableString
+from bs4 import BeautifulSoup,NavigableString, Comment
 import requests
 import time
 import re
@@ -13,12 +13,18 @@ def get_content(url):
     try:
         #remove the last 4 element
         article = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info')
+        h2 = article.find('h2')
+        h2_text = '\n'.join(line.strip() for line in h2.get_text().split('\n') if line.strip())
+        # Update the text of the h2 tag
+        h2.string = h2_text
         for script_or_style in article(['script', 'style']):
             script_or_style.decompose()
-        children = article.find_all(recursive=False)
-        for i in children[-4:]:
-            i.decompose()
+        article.find('div',recursive = True, class_ = 'bv-lq').decompose()
+        article.find('p', class_ = 'linkOrigin').decompose()
         caption_text_list =article.find_all('p',class_='img_chu_thich_0407')
+        for i in article.find_all('p', recursive = True):
+            if i.get('style') == 'text-align: center;':
+                i.decompose()
         #find a,span and remove tag with text
         tags_to_remove = article.find_all(['a', 'span'])
         for tag in tags_to_remove:
@@ -37,9 +43,17 @@ def get_content(url):
             if 'data-original' in i.attrs.keys():
                 i['src'] = i.get('data-original')
             #i.attrs = ['class', 'alt', 'src', 'data-original']
-            del i['onclick']
-            del i['style']
-            del i['class']
+            #del i['onclick']
+            #del i['style']
+            #del i['class']
+        list_attr = ['src','alt','data-src']
+        for i in article.find_all('img'):
+            for j in list(i.attrs.keys()):
+                if j not in list_attr:
+                    i.attrs.pop(j)
+        for i in article.find_all('img'):
+            if 'https://image-us.24h.com.vn/' not in i['src']:
+                i['src']= i['data-src']
         img_list = article.find_all('img')
         n_img = len(img_list)
         #print(len(caption_text_list))
@@ -79,12 +93,19 @@ def get_content(url):
             i['class'] = "aligncenter"
             i['width'] = 800
             i['height'] = 400
-        for item in article.find_all('div'):
-            if item.string =="":
-                item.decompose()
         source_tag = soup.new_tag('i') 
         source_tag.string = "Nguồn: 24h.com.vn"  # Set the content of <i> tag
-    
+        #remove empty div or empty space from element
+        for i in article.find_all('div',recursive= True):
+            if i.string == None:
+                if i.text =='':
+                    i.decompose()
+        for element in article.find_all(recursive = True,string=True):
+            if isinstance(element, NavigableString) and element.strip() == '':
+                element.extract()
+        #remove html comment from element   
+        for comment in article.find_all(string=lambda text: isinstance(text, Comment)):
+            comment.extract()
     # Append the <i> tag as the last child of the <article> tag
         article.append(source_tag)
     except (AttributeError, IndexError, TypeError):
@@ -119,9 +140,17 @@ def get_content(url):
                 if 'data-original' in i.attrs.keys():
                     i['src'] = i.get('data-original')
                 #i.attrs = ['class', 'alt', 'src', 'data-original']
-                del i['onclick']
-                del i['style']
-                del i['class']
+                #del i['onclick']
+                #del i['style']
+                #del i['class']
+                list_attr = ['src','alt','data-src']
+                for i in article.find_all('img'):
+                    for j in list(i.attrs.keys()):
+                        if j not in list_attr:
+                            i.attrs.pop(j)
+                for i in article.find_all('img'):
+                    if 'https://image-us.24h.com.vn/' not in i['src']:
+                        i['src']= i['data-src']
             for script_or_style in article(['script', 'style']):
                 script_or_style.decompose()
             for i in article.find_all(recursive = True):
@@ -139,12 +168,19 @@ def get_content(url):
                 i['class'] = "aligncenter"
                 i['width'] = 800
                 i['height'] = 400
-            for item in article.find_all('div'):
-                if item.string =="":
-                    item.decompose()
             source_tag = soup.new_tag('i') 
             source_tag.string = "Nguồn: 24h.com.vn"  # Set the content of <i> tag
-    
+            #remove empty div or empty space from element
+            for i in article.find_all('div',recursive= True):
+                if i.string == None:
+                    if i.text =='':
+                        i.decompose()
+            for element in article.find_all(recursive = True,string=True):
+                if isinstance(element, NavigableString) and element.strip() == '':
+                    element.extract()
+            #remove html comment from element   
+            for comment in article.find_all(string=lambda text: isinstance(text, Comment)):
+                comment.extract()
             # Append the <i> tag as the last child of the <article> tag
             article.append(source_tag)
         except AttributeError as e:
@@ -209,7 +245,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 7*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 2*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -357,7 +393,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": '5goalvodichcmnl',  # Replace with your actual access token
+        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date
           # Replace with the actual category ID as required
     }
@@ -383,10 +419,11 @@ def main():
                 title = web_24h_com_vn['urls'][i]['sub-category'][j]['content'][t]['title']
                 published_date = web_24h_com_vn['urls'][i]['sub-category'][j]['content'][t]['published_date']
                 cate_id = web_24h_com_vn['urls'][i]['cate_id']
-                send_post_to_5goals(title,text,cate_id,published_date)
                 print("title: ", title, "\n")
                 print("date: ", published_date, "\n")
                 print("id: ", cate_id, "\n")
+                send_post_to_5goals(title,str(text),cate_id,published_date)
+
                 #print(url_list[t],title, cate_id, published_date,text)
                 #return web_24h_com_vn
 if __name__ == '__main__':

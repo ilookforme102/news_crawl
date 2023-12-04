@@ -2,7 +2,7 @@ import requests
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString, Comment
+from bs4 import BeautifulSoup,NavigableString#, Comment
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
     pattern = r'\b\d{2}/\d{2}/\d{4}\b'
