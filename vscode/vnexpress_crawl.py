@@ -152,7 +152,7 @@ def get_list_url(url):
     return item_dict
 def filter_list(urls_dict):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-3*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-4*24*3600)
     for i in range(0,len(urls_dict)):
         try:
             date_posted_norm = get_datetime_obj(urls_dict[i]['date'])[0]
