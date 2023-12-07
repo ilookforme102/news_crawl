@@ -76,6 +76,7 @@ def get_content_autodaily(url):
         #del i['style']
         #del i['class']
         #del i['alt']
+    #remove all image attributes except somes from list
     list_attr = ['src','alt','data-src']
     for i in article.find_all('img'):
         for j in list(i.attrs.keys()):
@@ -85,17 +86,18 @@ def get_content_autodaily(url):
     n_img = len(img_list)
     #print(len(caption_text_list))
     for i in range(0,n_img):
-       
+
         caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
         try:
             caption_text = NavigableString(caption_text_list[i].get_text())
-        except IndexError:
-            caption_text = ''
-        caption_end = NavigableString("[/caption]")
-        # Insert the custom tags and caption text around the <img> tag
-        img_list[i].insert_before(caption_start)
-        img_list[i].insert_after(caption_end)
-        img_list[i].insert_after(caption_text) 
+            caption_end = NavigableString("[/caption]")
+            # Insert the custom tags and caption text around the <img> tag
+            img_list[i].insert_before(caption_start)
+            img_list[i].insert_after(caption_end)
+            img_list[i].insert_after(caption_text) 
+        except IndexError as e:
+            print(e)
+        
     for i in article.find_all('img'):
         i['src'] = i['data-src']
     for i in caption_text_list:
@@ -157,7 +159,7 @@ def get_list_url(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-1*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-0*24*3600)
     for i in urls:
         response = requests.get(i)
         time.sleep(2)
@@ -226,7 +228,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": '5goalvodichcmnl',  # Replace with your actual access token
+        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
         "domain":"autodaily"
           # Replace with the actual category ID as required
@@ -254,7 +256,15 @@ def main():
                 published_date = _autodaily['urls'][i]['sub-category'][j]['content'][t]['published_date']
                 cate_id = _autodaily['urls'][i]['sub-category'][j]['cate_id']
                 print(title, url_list[t])
-                send_post_to_5goals(title,str(content), cate_id, published_date)
-                time.sleep(2)
+                #send_post_to_5goals(title,str(content), cate_id, published_date)
+                try:
+                    text_len = len(content.text)
+                    if text_len <450:
+                        print(content.text)
+                        continue
+                    else:
+                         send_post_to_5goals(title,str(content),cate_id,published_date)
+                except (AttributeError,TypeError):
+                    continue
 if __name__ == '__main__':
     main()

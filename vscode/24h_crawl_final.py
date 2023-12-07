@@ -11,25 +11,26 @@ def remove_div(article):
     empty_divs = [div for div in divs if not div.text.strip() and not div.contents]
     if not empty_divs:
         return  # No more empty divs, stop recursion
-
     for div in empty_divs:
         div.decompose()
-    remove_div(article)
 def get_content(url):
     response = requests.get(url)
     time.sleep(3)
     soup = BeautifulSoup(response.content,  'html.parser')
     try:
-        #remove the last 4 element
         article = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info')
         #remove the last 4 element
-        article.find('p', class_ = 'tuht_all').decompose()
-        article.find('div',class_  = 'bv-lq').decompose()
-        article.find('div', id = 'zone_banner_sponser_product').decompose()
-        article.find('p', class_ = 'linkOrigin').decompose()
-        article.find('div', class_ = 'block-quiz').decompose()
-        article.find('div', class_ = 'podcasts-eva-t').decompose()
-        
+        try:
+            article.find('p', class_ = 'tuht_all').decompose()
+            article.find('div',class_  = 'bv-lq').decompose()
+            article.find('div', id = 'zone_banner_sponser_product').decompose()
+            article.find('p', class_ = 'linkOrigin').decompose()
+            
+            article.find('div', class_ = 'block-quiz').decompose()
+            article.find('div', class_ = 'podcasts-eva-t').decompose()
+        except AttributeError as e:
+            print(e)
+        tags_to_remove = article.find_all(['a', 'span'])
         tags_to_remove = article.find_all(['span'])
         for tag in tags_to_remove:
             # Extract the text from the tag
@@ -44,6 +45,7 @@ def get_content(url):
             # Replace the tag with its text content
             a .replace_with(tag_text)
             a .text.strip()
+        # set attribut for img
         # set attribut for img
         b = article.find_all('img')
         for i in b:
@@ -97,6 +99,14 @@ def get_content(url):
         source_tag.string = "Nguồn: 24h.com.vn"  # Set the content of <i> tag
         # Append the <i> tag as the last child of the <article> tag
         article.append(source_tag)
+        a_tags_to_remove = article.find_all('a')
+        for a in a_tags_to_remove:
+            # Extract the text from the tag
+            tag_text = a .get_text()
+            # Replace the tag with its text content
+            a .replace_with(tag_text)
+            a .text.strip()
+        remove_div(article)
     except (AttributeError, IndexError, TypeError):
         try:
             article = soup.find('div', id= 'magazine_news')
@@ -177,10 +187,16 @@ def get_content(url):
                 comment.extract()
             # Append the <i> tag as the last child of the <article> tag
             article.append(source_tag)
-            remove_div(article)
+            a_tags_to_remove = article.find_all('a')
+            for a in a_tags_to_remove:
+                # Extract the text from the tag
+                tag_text = a .get_text()
+                # Replace the tag with its text content
+                a .replace_with(tag_text)
+                a .text.strip()
+                remove_div(article)
         except AttributeError as e:
             print(e)
-    remove_div(article)
     return article
 #convert time from post to the format of output
 def convert_string(input_str):
@@ -215,7 +231,7 @@ def get_post(url):
         time.sleep(3)
         soup = BeautifulSoup(response.content, 'html5lib')
         content = get_content(url)
-        post_time = soup.find('time').text.strip()
+        post_time = soup.find('time', class_ = 'cate-24h-foot-arti-deta-cre-post').text.strip()
         published_date = convert_string(post_time)
         title = soup.find('h1').text.strip()
         #h2 = soup.find('h2').text.strip()
@@ -242,7 +258,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 3*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 4*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -314,65 +330,13 @@ def get_news():
     web_24h_com_vn = {
         "home_page":"https://www.24h.com.vn/",
         "urls":{
-            "tech":
+            
+            "người đẹp":
             {
-             "url":"https://www.24h.com.vn/cong-nghe-thong-tin-c55.html",
-             "cate_id":57,
+            "cate_id":63,
+            "url":"https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html#",
              "sub-category":{
-                0:{"name":"Game",
-                 "url":"https://www.24h.com.vn/game-c69.html"},
-                1:{"name":"Phần mềm",
-                 "url":"https://www.24h.com.vn/phan-mem-ngoai-c302.html"},
-                2:{"name":"Khoa học",
-                 "url":"https://www.24h.com.vn/khoa-hoc-c782.html"},
-                3:{"name":"Mạng xã hội",
-                 "url":"https://www.24h.com.vn/mang-xa-hoi-c889.html"},
-                4:{"name":"Thủ thuật - Tiện ích"
-                 ,"url":"https://www.24h.com.vn/thu-thuat-tien-ich-c68.html"},
-                5:{"name":"Sợ Virus",
-                 "url":"https://www.24h.com.vn/tim-hieu-virus-c57.html"},
-                6:{"name":"Máy in/phụ kiện",
-                 "url":"https://www.24h.com.vn/may-in/phu-kien-c291.html"},
-                7:{"name":"Khám phá công nghệ",
-                 "url":"https://www.24h.com.vn/kham-pha-cong-nghe-c675.html"}
-             }
-            }
-            ,
-            "youths":
-            {
-            "url":"https://www.24h.com.vn/ban-tre-cuoc-song-c64.html",
-            "cate_id":60,
-             "sub-category":{
-                0:{"name":"Chuyện công sở","url":"https://www.24h.com.vn/chuyen-cong-so-c180.html"},
-                1:{"name":"Tình yêu - Giới Tính","url":"https://www.24h.com.vn/tinh-yeu-gioi-tinh-c306.html"},
-                2:{"name":"Ngoại tình","url":"https://www.24h.com.vn/ngoai-tinh-c435.html"},
-                3:{"name":"Giới trẻ","url":"https://www.24h.com.vn/gioi-tre-c434.html"},
-                4:{"name":"Hotgirl - Hotboy","url":"https://www.24h.com.vn/hotgirl-hot-boy-c64e3398.html"},
-                5:{"name":"Nhịp sống trẻ","url":"https://www.24h.com.vn/nhip-song-tre-c685.html"}
-             }
-            }
-            ,
-            "showbiz":
-            {
-            "cate_id":59,
-            "url":"https://www.24h.com.vn/doi-song-showbiz-c729.html",
-             "sub-category":{
-                0:{"name":"Sao Việt","url":"https://www.24h.com.vn/sao-viet-c757.html"},
-                1:{"name":"24h gặp gỡ","url":"https://www.24h.com.vn/gap-go-24h-c729e6820.html"},
-                2:{"name":"Talk với sao","url":"https://www.24h.com.vn/doi-thoai-cung-sao-c730.html"},
-                3:{"name":"Sao châu Á","url":"https://www.24h.com.vn/sao-chau-a-c759.html"},
-            }
-            },
-            "cars":
-            {
-            "cate_id":58,
-            "url":"https://www.24h.com.vn/o-to-c747.html",
-             "sub-category":{
-                0:{"name":"Tin tức ô tô","url":"https://www.24h.com.vn/tin-tuc-o-to-c332.html"},
-                1:{"name":"Bảng giá xe ô tô","url":"https://www.24h.com.vn/bang-gia-xe-o-to-c807.html"},
-                2:{"name":"Tư vấn","url":"https://www.24h.com.vn/tu-van-c240.html"},
-                3:{"name":"Ngắm xe","url":"https://www.24h.com.vn/anh-nguoi-dep-va-xe-c199.html"},
-                4:{"name":"Đánh giá xe","url":"https://www.24h.com.vn/so-sanh-xe-c805.html"},
+                0:{"name":"người đẹp thể thao","url":"https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html"}
             }
             }
         }
@@ -432,5 +396,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-                #print(url_list[t],title, cate_id, published_date,text)
-                #return web_24h_com_vn
+                
