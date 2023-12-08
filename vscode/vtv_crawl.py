@@ -232,3 +232,5 @@ def main():
                 print(title, url_list[t],published_date)
                 send_post_to_5goals(title,content, cate_id, published_date)
                 time.sleep(2)
+if __name__ == '__main__':
+    main()

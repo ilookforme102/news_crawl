@@ -30,7 +30,6 @@ def get_content(url):
             article.find('div', class_ = 'podcasts-eva-t').decompose()
         except AttributeError as e:
             print(e)
-        tags_to_remove = article.find_all(['a', 'span'])
         tags_to_remove = article.find_all(['span'])
         for tag in tags_to_remove:
             # Extract the text from the tag
@@ -99,13 +98,13 @@ def get_content(url):
         source_tag.string = "Nguồn: 24h.com.vn"  # Set the content of <i> tag
         # Append the <i> tag as the last child of the <article> tag
         article.append(source_tag)
-        a_tags_to_remove = article.find_all('a')
+        a_tags_to_remove = article.find_all('a', class_ ="TextlinkBaiviet")
         for a in a_tags_to_remove:
             # Extract the text from the tag
             tag_text = a .get_text()
             # Replace the tag with its text content
-            a .replace_with(tag_text)
-            a .text.strip()
+            a.replace_with(tag_text)
+            a.text.strip()
         remove_div(article)
     except (AttributeError, IndexError, TypeError):
         try:
@@ -121,13 +120,20 @@ def get_content(url):
                 vd_caption.decompose()
             for video in videos:
                 video.decompose()
-            tags_to_remove = article.find_all(['a', 'span'])
+            tags_to_remove = article.find_all(['span'])
             for tag in tags_to_remove:
                 # Extract the text from the tag
                 tag_text = tag.get_text()
                 # Replace the tag with its text content
                 tag.replace_with(tag_text)
                 tag.text.strip()
+            a_tags_to_remove = article.find_all('a', class_ ="TextlinkBaiviet")
+            for a in a_tags_to_remove:
+                # Extract the text from the tag
+                tag_text = a .get_text()
+                # Replace the tag with its text content
+                a.replace_with(tag_text)
+                a.text.strip()
             # set attribut for img
             b = article.find_all('img')
             for i in b:
@@ -187,16 +193,18 @@ def get_content(url):
                 comment.extract()
             # Append the <i> tag as the last child of the <article> tag
             article.append(source_tag)
-            a_tags_to_remove = article.find_all('a')
+            a_tags_to_remove = article.find_all('a', class_ = "TextlinkBaiviet")
             for a in a_tags_to_remove:
                 # Extract the text from the tag
                 tag_text = a .get_text()
                 # Replace the tag with its text content
-                a .replace_with(tag_text)
-                a .text.strip()
+                a.replace_with(tag_text)
+                a.text.strip()
                 remove_div(article)
         except AttributeError as e:
             print(e)
+    for a in article.find_all('a'):
+        a['href'] = "javascript:void(0)"
     return article
 #convert time from post to the format of output
 def convert_string(input_str):

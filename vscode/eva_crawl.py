@@ -1,9 +1,8 @@
-
 import requests 
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString#, Comment
+from bs4 import BeautifulSoup,NavigableString, Comment
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
     pattern = r'\b\d{2}/\d{2}/\d{4}\b'
@@ -46,113 +45,94 @@ def get_time_string(date_str):
     return date_obj, date
 
 
-def get_content_autodaily(url):
+def remove_div(article):
+    divs = article.find_all('div')
+    empty_divs = [div for div in divs if not div.text.strip() and not div.contents]
+    if not empty_divs:
+        return  # No more empty divs, stop recursion
+    for div in empty_divs:
+        div.decompose()
+def get_content_eva(url):
     # def get_content_autodaily()
     response = requests.get(url)
-    time.sleep(5)
     soup = BeautifulSoup(response.content, 'html.parser')
-    title = soup.find('h1').text.strip()
-    date = soup.find('time').text.strip()
+    title = soup.find('h1', id = 'tieu_de_bai_viet').text.strip()
+    date = soup.find('div', class_ = 'eva-author-time-art mar-b-25').text.strip()
     published_date = convert_string(date)
-    article = soup.find('div', class_ = 'article-detail')
+    article = soup.find('article', class_ = 'eva-cont-art no-copy')    
+    #h2_tag = soup.new_tag('h2')
+    #h2 = soup.find('h2')
+    #try:
+    article.insert(0,soup.find('h2'))
     for script_or_style in article(['script', 'style','iframe']):
-                script_or_style.decompose()
-    related_item = article.find('div', class_ = 'item-relate')
-    related_item.decompose()
-    author_item = article.find_all(recursive = True)[-2:]
-    for i in author_item:
-        i.decompose()
-    caption_text_list = article.find_all('em')
-    tags_to_remove = article.find_all(['a', 'span'])
-    for tag in tags_to_remove:
-        # Extract the text from the tag
-        tag_text = tag.get_text()
-        # Replace the tag with its text content
-        tag.replace_with(tag_text)
-        tag.text.strip()
-    #for i in article.find_all('img'):
-        #i.attrs = ['class', 'alt', 'src', 'data-original']
-        #del i['onclick']
-        #del i['style']
-        #del i['class']
-        #del i['alt']
-    #remove all image attributes except somes from list
-    list_attr = ['src','alt','data-src']
-    for i in article.find_all('img'):
-        for j in list(i.attrs.keys()):
-            if j not in list_attr:
-                i.attrs.pop(j)
-    img_list = article.find_all('img')
-    n_img = len(img_list)
-    #print(len(caption_text_list))
-    for i in range(0,n_img):
-
-        caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
+        script_or_style.decompose()
+    element = article.find('div', recursive= True)  # Example: remove comments from the first <div> element
+    for comment in element.find_all(string=lambda text: isinstance(text, Comment)):
+        comment.decompose()
+    videos = article.find_all('div', align="center")
+    related_article =  article.find('div', class_ = 'evtBox evtBoxPrBt')
+    related_article.decompose()
+    for video in videos:
+        video.find_next_sibling('p', class_ = 'img_chu_thich_0407 eva-cont-art__cap-img text-center').decompose()
+        video.decompose()
+    for caption in article.find_all('p', class_ = "img_chu_thich_0407 eva-cont-art__cap-img text-center"):
+        img_container = caption.find_previous_sibling()
         try:
-            caption_text = NavigableString(caption_text_list[i].get_text())
+            src = img_container.find('img')['data-original']
+            img_tag = soup.new_tag('img')
+            img_tag['src'] = src
+            caption.insert_before(img_tag)
+            caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
+            caption_text = NavigableString(caption.text.strip())
             caption_end = NavigableString("[/caption]")
-            # Insert the custom tags and caption text around the <img> tag
-            img_list[i].insert_before(caption_start)
-            img_list[i].insert_after(caption_end)
-            img_list[i].insert_after(caption_text) 
-        except IndexError as e:
-            print(e)
-        
+                # Insert the custom tags and caption text around the <img> tag
+            img_tag.insert_before(caption_start)
+            img_tag.insert_after(caption_end)
+            img_tag.insert_after(caption_text)
+            img_container.decompose()
+            caption.decompose()
+            #print(src)
+        except TypeError:
+            continue
     for i in article.find_all('img'):
-        i['src'] = i['data-src']
-    for i in caption_text_list:
+            i['class'] = "aligncenter"
+    for i in article.find_all('div', style="display: none"):
         i.decompose()
-        #print(img_list[i]['src'])
-        #caption_text_list[i].decompose()
+    for a_tag in article.find_all('a'):
+        a_tag['href'] = 'javascript:void(0)'    
     for i in article.find_all(recursive = True):
         try:
             del i['onclick']
             i['id'] =''
             i['class']=''
             i['style'] =''
-            i['href'] = ''
         except AttributeError:
             continue
-        #try:
-            #print(i)
-            
         except TypeError:
             continue
-    for i in article.find_all('img'):
-        i['class'] = "aligncenter"
-        i['width'] = 800
-        i['height'] = 400
-        del i['data-src']
     for item in article.find_all('div'):
         if item.string =="":
             item.decompose()
     source_tag = soup.new_tag('i') 
-    source_tag.string = "Nguồn: autodaily.vn"  # Set the content of <i> tag
-    
+    source_tag.string = "Nguồn: eva.vn"  # Set the content of <i> tag
+    remove_div(article)
     # Append the <i> tag as the last child of the <article> tag
     article.append(source_tag)
-    #Highlight the fist paragraph by using <strong> tag
-    p_tag_1st = article.find_all('p')[0]
-    p_text = p_tag_1st.get_text()
-    # Create a new <strong> tag with the same text
-    strong_tag = soup.new_tag("strong")
-    strong_tag.string = p_text
-
+    #except AttributeError as e:
+        #print(e, url)
     # Replace the <p> tag with the <strong> tag
-    p_tag_1st.replace_with(strong_tag)
     return article, title, published_date
 def get_post(url):
     try:
-        content,title,published_date = get_content_autodaily(url)
+        content,title,published_date = get_content_eva(url) 
         return content,title,published_date
     except AttributeError as e:
         print(e)
+    
 def get_list_url(cate_url):
     response = requests.get(cate_url)
-    time.sleep(3)
     soup = BeautifulSoup(response.content, 'html.parser')
-    featured_posts = soup.find('ul', class_ = 'late-news-lst')
-    list = featured_posts.find_all('li', class_ = 'clearfix')
+    list = soup.find_all('article', class_ = 'eva-news-trend-h-items d-flex')
     urls = []
     for i in list:
         url = i.find('a')['href']
@@ -160,20 +140,13 @@ def get_list_url(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-1*24*3600)
-    for i in urls:
-        response = requests.get(i)
-        time.sleep(2)
-        soup = BeautifulSoup(response.content, 'html.parser')
+    crawl_time = datetime.fromtimestamp(time.time()-4*24*3600)
+    for i in range(0,len(urls)):
         try:
-            #wrapper = soup.find('div', class_ = "col780 left clearafter")
-            #date_posted = wrapper.find('p',class_ ='news-time left').text.strip()
-            #date_posted_norm = convert_time_string(date_posted)
-            date_str = soup.find('time').text.strip()
-            #print(date_str)
-            date_posted_norm = get_time_string(date_str)[0]
+            published_date = get_content_eva(urls[i])[2]
+            date_posted_norm = datetime.strptime(published_date, '%Y-%m-%d')
             if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
-                filtered_urls.append(i)
+                filtered_urls.append(urls[i])
                 #print(i)
         except AttributeError as e:
             print(e)
@@ -199,26 +172,26 @@ def add_post(web_json_obj):
                     web_json_obj['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
                     print(i,j,web_json_obj['urls'][i]['sub-category'][j]['cate_id'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
 #add all necessary information to json object
-def get_news_autodaily():
-    _autodaily= {
-            "home_page":"https://autodaily.vn/",
+def get_news_eva():
+    _eva= {
+            "home_page":"https://eva.vn/",
             "urls":{
-                "Ô tô":
+                "Nhân vật đẹp":
                 {
-                 "url":"https://autodaily.vn/#",
+                 "url":"https://eva.vn/nhan-vat-dep-c262.html#",
                  "sub-category":{  
-                    0:{"name":"Ô tô",
-                     "url":"https://autodaily.vn/",
-                     "cate_id":58,
+                    0:{"name":"Người đẹp",
+                     "url":"https://eva.vn/nhan-vat-dep-c262.html",
+                     "cate_id":63,
                       "url_list" : []},
                  }
                 }
             }
         }
 #
-    add_list(_autodaily)
-    add_post(_autodaily)
-    return _autodaily
+    add_list(_eva)
+    add_post(_eva)
+    return _eva
 #send post content to wordpress via endpoint
 def send_post_to_5goals(title,content,category_id,published_date):
     # URL of the API endpoint (this is a placeholder and needs to be replaced with the actual URL)
@@ -231,7 +204,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "category_id": category_id,
         "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
-        "domain":"autodaily"
+        "domain":"eva.vn"
           # Replace with the actual category ID as required
     }
     
@@ -245,17 +218,17 @@ def send_post_to_5goals(title,content,category_id,published_date):
     else:
         print(f"Failed to create the post. Status code: {response.status_code}")
 def main():
-    _autodaily = get_news_autodaily()
-    for i in list(_autodaily['urls'].keys()):
+    _eva = get_news_eva()
+    for i in list(_eva['urls'].keys()):
     #web_24h_com_vn2['url'][i]['cate_id']
-        for j in list(_autodaily['urls'][i]['sub-category']):
-            url_list =  _autodaily['urls'][i]['sub-category'][j]['url_list']
+        for j in list(_eva['urls'][i]['sub-category']):
+            url_list =  _eva['urls'][i]['sub-category'][j]['url_list']
             print(url_list)
             for t in range(0,len(url_list)):
-                content = _autodaily['urls'][i]['sub-category'][j]['content'][t]['text']
-                title = _autodaily['urls'][i]['sub-category'][j]['content'][t]['title']
-                published_date = _autodaily['urls'][i]['sub-category'][j]['content'][t]['published_date']
-                cate_id = _autodaily['urls'][i]['sub-category'][j]['cate_id']
+                content = _eva['urls'][i]['sub-category'][j]['content'][t]['text']
+                title = _eva['urls'][i]['sub-category'][j]['content'][t]['title']
+                published_date = _eva['urls'][i]['sub-category'][j]['content'][t]['published_date']
+                cate_id = _eva['urls'][i]['sub-category'][j]['cate_id']
                 print(title, url_list[t])
                 #send_post_to_5goals(title,str(content), cate_id, published_date)
                 try:
@@ -264,8 +237,10 @@ def main():
                         print(content.text)
                         continue
                     else:
-                         send_post_to_5goals(title,str(content),cate_id,published_date)
+                        send_post_to_5goals(title,str(content),cate_id,published_date)
+                        print("Good job, well done!!!")
                 except (AttributeError,TypeError):
                     continue
+
 if __name__ == '__main__':
     main()

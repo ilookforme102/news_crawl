@@ -240,8 +240,16 @@ def main():
                 title = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['title']
                 published_date = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['published_date']
                 cate_id = _vnexpress['urls'][i]['sub-category'][j]['cate_id']
-                print(title, url_list[t])
-                send_post_to_5goals(title,str(content), cate_id, published_date)
-                time.sleep(2)
+                
+                try:
+                    text_len = len(content.text)
+                    if text_len <450:
+                        print(content.text)
+                        continue
+                    else:
+                         print(title, url_list[t])
+                         send_post_to_5goals(title,str(content),cate_id,published_date)
+                except (AttributeError,TypeError):
+                    continue
 if __name__ == '__main__':
     main()
