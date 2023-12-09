@@ -59,75 +59,86 @@ def get_content_eva(url):
     title = soup.find('h1', id = 'tieu_de_bai_viet').text.strip()
     date = soup.find('div', class_ = 'eva-author-time-art mar-b-25').text.strip()
     published_date = convert_string(date)
-    article = soup.find('article', class_ = 'eva-cont-art no-copy')    
-    #h2_tag = soup.new_tag('h2')
-    #h2 = soup.find('h2')
-    #try:
-    article.insert(0,soup.find('h2'))
-    for script_or_style in article(['script', 'style','iframe']):
-        script_or_style.decompose()
+    article = soup.find('article', class_ = 'eva-cont-art no-copy')
     element = article.find('div', recursive= True)  # Example: remove comments from the first <div> element
     for comment in element.find_all(string=lambda text: isinstance(text, Comment)):
         comment.decompose()
-    videos = article.find_all('div', align="center")
     related_article =  article.find('div', class_ = 'evtBox evtBoxPrBt')
     related_article.decompose()
+    videos = article.find_all('div', align="center")
     for video in videos:
         video.find_next_sibling('p', class_ = 'img_chu_thich_0407 eva-cont-art__cap-img text-center').decompose()
         video.decompose()
-    for caption in article.find_all('p', class_ = "img_chu_thich_0407 eva-cont-art__cap-img text-center"):
-        img_container = caption.find_previous_sibling()
+    img_container = article.find_all('p', align = "center")
+    for container in img_container:
         try:
-            src = img_container.find('img')['data-original']
+            caption = container.find_next_sibling('p', class_ ='img_chu_thich_0407 eva-cont-art__cap-img text-center')
+            #print(caption.text.strip())
+            src = container.find('img')['data-original']
             img_tag = soup.new_tag('img')
             img_tag['src'] = src
             caption.insert_before(img_tag)
-            caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
-            caption_text = NavigableString(caption.text.strip())
-            caption_end = NavigableString("[/caption]")
-                # Insert the custom tags and caption text around the <img> tag
-            img_tag.insert_before(caption_start)
-            img_tag.insert_after(caption_end)
-            img_tag.insert_after(caption_text)
-            img_container.decompose()
+            figure_tag = soup.new_tag("figure")
+            img_tag.wrap(figure_tag)
+            
+            # Create a new <figcaption> tag and add it after the <img> tag
+            figcaption_tag = soup.new_tag("figcaption")
+            figcaption_tag.string = caption.text.strip()
+            img_tag.insert_after(figcaption_tag)
+            figcaption_tag['align'] = "center"
             caption.decompose()
-            #print(src)
-        except TypeError:
+            container.decompose()
+        except (TypeError, AttributeError) as e:
+            #print(e)
             continue
     for i in article.find_all('img'):
             i['class'] = "aligncenter"
-    for i in article.find_all('div', style="display: none"):
-        i.decompose()
-    for a_tag in article.find_all('a'):
-        a_tag['href'] = 'javascript:void(0)'    
-    for i in article.find_all(recursive = True):
-        try:
-            del i['onclick']
-            i['id'] =''
-            i['class']=''
-            i['style'] =''
-        except AttributeError:
-            continue
-        except TypeError:
-            continue
-    for item in article.find_all('div'):
-        if item.string =="":
-            item.decompose()
     source_tag = soup.new_tag('i') 
     source_tag.string = "Nguồn: eva.vn"  # Set the content of <i> tag
-    remove_div(article)
-    # Append the <i> tag as the last child of the <article> tag
     article.append(source_tag)
-    #except AttributeError as e:
-        #print(e, url)
-    # Replace the <p> tag with the <strong> tag
+    for i in article.find_all('div', style="display: none"):
+        i.decompose()
+    a_tags = article.find_all('a')
+    for a_tag in a_tags:
+        if len(a_tag.contents) == 1 and a_tag.find('img'):
+            a_tag['href'] = 'javascript:void(0)'
+        else:
+            tag_text = a_tag.get_text()
+            # Replace the tag with its text content
+            a_tag.replace_with(tag_text)
+            a_tag.text.strip()
+    h2 =  soup.find_all('h2')[0]
+    new_h2 = soup.new_tag("h2")
+    new_h2.string = h2.text.strip()
+    article.insert(0,h2)
+    for i in article.find_all(recursive = True):
+        if i.name != 'figcaption':
+            try:
+                del i['onclick']
+                del i['id']
+                del i['class']
+                del i['style']
+            except AttributeError:
+                continue
+            except TypeError:
+                continue
+    tags_to_remove = article.find_all(['span'])
+    for tag in tags_to_remove:
+        # Extract the text from the tag
+        tag_text = tag.get_text()
+        # Replace the tag with its text content
+        tag.replace_with(tag_text)
+        tag.text.strip()
+    for script_or_style in article(['script', 'style','iframe']):
+        script_or_style.decompose()
     return article, title, published_date
 def get_post(url):
     try:
         content,title,published_date = get_content_eva(url) 
         return content,title,published_date
     except AttributeError as e:
-        print(e)
+        return
+        
     
 def get_list_url(cate_url):
     response = requests.get(cate_url)
@@ -140,7 +151,7 @@ def get_list_url(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-4*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-8*24*3600)
     for i in range(0,len(urls)):
         try:
             published_date = get_content_eva(urls[i])[2]
@@ -149,7 +160,7 @@ def filter_list(urls):
                 filtered_urls.append(urls[i])
                 #print(i)
         except AttributeError as e:
-            print(e)
+            #print(e)
             continue
     return filtered_urls
 #add list url to json
@@ -204,7 +215,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "category_id": category_id,
         "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
-        "domain":"eva.vn"
+        "domain":"eva"
           # Replace with the actual category ID as required
     }
     

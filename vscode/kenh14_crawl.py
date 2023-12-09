@@ -20,27 +20,28 @@ def convert_string(input_str):
 def get_content_kenh14(url):
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
-    article =  soup.find('div', class_ = "klw-new-content")
-    children = article.find_all(recursive=False)
-    related_news =  article.find('div', class_ = 'knc-relate-wrapper relationnews')
-    related_news.decompose()
-    for i in children[-6:]:
-        i.decompose() 
+    article =  soup.find('div', class_ = "knc-content")
+    h2_tag =  soup.find('h2', class_ = 'knc-sapo')
+    article.insert(0, h2_tag)
     caption_text_list =article.find_all( class_="PhotoCMS_Caption")
-    img_list = article.find_all(['img','video'])[:-1]
-    n_img = len(img_list)
-    for i in range(0,n_img):
+    post_time = soup.find('span', class_ = 'kbwcm-time').text.strip()
+    published_date = convert_string(post_time)
+    title = soup.find('h1').text.strip()
+    for caption in caption_text_list:
+        img_container = caption.previous_sibling
+        img = img_container.find('img')
+        img['src'] = img['data-original']
+        img
         caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
-        caption_text = NavigableString(caption_text_list[i].text)
-        caption_end = NavigableString("[/caption]")
-        caption_text_list[i].decompose()
-            # Insert the custom tags and caption text around the <img> tag
-        img_list[i].insert_before(caption_start)
-        img_list[i].insert_after(caption_end)
         try:
-            img_list[i].insert_after(caption_text) 
-        except IndexError as e:
-            print(e)        #print(len(caption_text_list))
+            caption_text = NavigableString(caption.find('p').text.strip())
+        except IndexError:
+            caption_text = ''
+        caption_end = NavigableString("[/caption]")
+        img.insert_before(caption_start)
+        img.insert_after(caption_end)
+        img.insert_after(caption_text)
+        caption.decompose()
     for script_or_style in article(['script', 'style']):
             script_or_style.decompose() 
     for i in article.find_all(recursive = True):
@@ -82,16 +83,10 @@ def get_content_kenh14(url):
             i.text.trip()
         except AttributeError as e:
             continue
-    return article
+    return article, title, published_date 
 def get_post(url):
     try:
-        response = requests.get(url)
-        time.sleep(5)
-        soup = BeautifulSoup(response.content, 'html5lib')
-        content = get_content_kenh14(url)
-        post_time = soup.find('span', class_ = 'kbwcm-time').text.strip()
-        published_date = convert_string(post_time)
-        title = soup.find('h1').text.strip()
+        content,title,published_date = get_content_kenh14(url)
         return content,title,published_date
     except AttributeError as e:
         print(e)
@@ -110,7 +105,7 @@ def convert_time_string(posted_date):
 def get_list_url(cate_url):
     response = requests.get(cate_url)
     soup = BeautifulSoup(response.content, 'html.parser')
-    list_url = soup.find('div', attrs = {'data-marked-zoneid':'kenh14_detail_d3'}).find_all('li')
+    list_url = soup.find_all('h3', class_ = "knswli-title")
     list = []
     for i in list_url:
         try:
@@ -122,7 +117,7 @@ def get_list_url(cate_url):
     return list
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() -2*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -187,7 +182,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": '5goalvodichcmnl',  # Replace with your actual access token
+        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
         "domain":"kenh14"
           # Replace with the actual category ID as required
@@ -215,6 +210,7 @@ def main():
                 cate_id = _kenh14['urls'][i]['sub-category'][j]['cate_id']
                 send_post_to_5goals(title,str(content), cate_id, published_date)
                 time.sleep(5)
-    return _kenh14
+    
+
 if __name__ == '__main__':
     main()
