@@ -266,7 +266,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 4*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 3*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -338,6 +338,67 @@ def get_news():
     web_24h_com_vn = {
         "home_page":"https://www.24h.com.vn/",
         "urls":{
+            "tech":
+            {
+             "url":"https://www.24h.com.vn/cong-nghe-thong-tin-c55.html",
+             "cate_id":57,
+             "sub-category":{
+                0:{"name":"Game",
+                 "url":"https://www.24h.com.vn/game-c69.html"},
+                1:{"name":"Phần mềm",
+                 "url":"https://www.24h.com.vn/phan-mem-ngoai-c302.html"},
+                2:{"name":"Khoa học",
+                 "url":"https://www.24h.com.vn/khoa-hoc-c782.html"},
+                3:{"name":"Mạng xã hội",
+                 "url":"https://www.24h.com.vn/mang-xa-hoi-c889.html"},
+                4:{"name":"Thủ thuật - Tiện ích"
+                 ,"url":"https://www.24h.com.vn/thu-thuat-tien-ich-c68.html"},
+                5:{"name":"Sợ Virus",
+                 "url":"https://www.24h.com.vn/tim-hieu-virus-c57.html"},
+                6:{"name":"Máy in/phụ kiện",
+                 "url":"https://www.24h.com.vn/may-in/phu-kien-c291.html"},
+                7:{"name":"Khám phá công nghệ",
+                 "url":"https://www.24h.com.vn/kham-pha-cong-nghe-c675.html"}
+             }
+            }
+            ,
+            "youths":
+            {
+            "url":"https://www.24h.com.vn/ban-tre-cuoc-song-c64.html",
+            "cate_id":60,
+             "sub-category":{
+                0:{"name":"Chuyện công sở","url":"https://www.24h.com.vn/chuyen-cong-so-c180.html"},
+                1:{"name":"Tình yêu - Giới Tính","url":"https://www.24h.com.vn/tinh-yeu-gioi-tinh-c306.html"},
+                2:{"name":"Ngoại tình","url":"https://www.24h.com.vn/ngoai-tinh-c435.html"},
+                3:{"name":"Giới trẻ","url":"https://www.24h.com.vn/gioi-tre-c434.html"},
+                4:{"name":"Hotgirl - Hotboy","url":"https://www.24h.com.vn/hotgirl-hot-boy-c64e3398.html"},
+                5:{"name":"Nhịp sống trẻ","url":"https://www.24h.com.vn/nhip-song-tre-c685.html"}
+             }
+            }
+            ,
+            "showbiz":
+            {
+            "cate_id":59,
+            "url":"https://www.24h.com.vn/doi-song-showbiz-c729.html",
+             "sub-category":{
+                0:{"name":"Sao Việt","url":"https://www.24h.com.vn/sao-viet-c757.html"},
+                1:{"name":"24h gặp gỡ","url":"https://www.24h.com.vn/gap-go-24h-c729e6820.html"},
+                2:{"name":"Talk với sao","url":"https://www.24h.com.vn/doi-thoai-cung-sao-c730.html"},
+                3:{"name":"Sao châu Á","url":"https://www.24h.com.vn/sao-chau-a-c759.html"},
+            }
+            },
+            "cars":
+            {
+            "cate_id":58,
+            "url":"https://www.24h.com.vn/o-to-c747.html",
+             "sub-category":{
+                0:{"name":"Tin tức ô tô","url":"https://www.24h.com.vn/tin-tuc-o-to-c332.html"},
+                1:{"name":"Bảng giá xe ô tô","url":"https://www.24h.com.vn/bang-gia-xe-o-to-c807.html"},
+                2:{"name":"Tư vấn","url":"https://www.24h.com.vn/tu-van-c240.html"},
+                3:{"name":"Ngắm xe","url":"https://www.24h.com.vn/anh-nguoi-dep-va-xe-c199.html"},
+                4:{"name":"Đánh giá xe","url":"https://www.24h.com.vn/so-sanh-xe-c805.html"},
+            }
+            },
             
             "người đẹp":
             {
@@ -393,8 +454,11 @@ def main():
                 print("id: ", cate_id, "\n")
                 try:
                     text_len = len(text.text)
-                    if text_len <450:
+                    if text_len <500:
                         print(text.text)
+                        continue
+                    if "Clip:" in title:
+                        print(title)
                         continue
                     else:
                          send_post_to_5goals(title,str(text),cate_id,published_date)

@@ -35,7 +35,7 @@ def get_content_kenh14(url):
         caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
         try:
             caption_text = NavigableString(caption.find('p').text.strip())
-        except IndexError:
+        except (IndexError, AttributeError):
             caption_text = ''
         caption_end = NavigableString("[/caption]")
         img.insert_before(caption_start)
@@ -117,7 +117,7 @@ def get_list_url(cate_url):
     return list
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() -2*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() -4*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
@@ -137,7 +137,7 @@ def add_list(web_json_obj):
             urls = get_list_url(web_json_obj['urls'][i]['sub-category'][j]['url'])
             print(i,j,web_json_obj['urls'][i]['sub-category'][j]['url'])
             web_json_obj['urls'][i]['sub-category'][j]['url_list'] = filter_list(urls)
-
+# add post content from get content function to json object
 def add_post(web_json_obj):
     for i in list(web_json_obj['urls'].keys()):
         for j in list(web_json_obj['urls'][i]['sub-category'].keys()):
@@ -148,7 +148,7 @@ def add_post(web_json_obj):
                 if u != "":
                     web_json_obj['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
                     print(i,j,web_json_obj['urls'][i]['sub-category'][j]['cate_id'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
-                
+#add all necessary information to json object
 def get_news_kenh14():
     _kenh14 = {
             "home_page":"https://kenh14.vn/",
@@ -201,7 +201,7 @@ def main():
     _kenh14 = get_news_kenh14()
     for i in list(_kenh14['urls'].keys()):
     #web_24h_com_vn2['url'][i]['cate_id']
-        for j in list(_kenh14['urls'][i]['sub-category']):
+        for j in list(_kenh14['urls'][i]['sub-category'].keys()):
             url_list =  _kenh14['urls'][i]['sub-category'][j]['url_list']
             for t in range(0,len(url_list)):
                 content = _kenh14['urls'][i]['sub-category'][j]['content'][t]['text']
@@ -210,7 +210,6 @@ def main():
                 cate_id = _kenh14['urls'][i]['sub-category'][j]['cate_id']
                 send_post_to_5goals(title,str(content), cate_id, published_date)
                 time.sleep(5)
-    
 
 if __name__ == '__main__':
     main()
