@@ -1,6 +1,6 @@
 
 #importing library
-from bs4 import BeautifulSoup,NavigableString, Comment
+from bs4 import BeautifulSoup,NavigableString, Comment, Tag
 import requests
 import time
 import re
@@ -24,8 +24,8 @@ def get_content(url):
             article.find('p', class_ = 'tuht_all').decompose()
             article.find('div',class_  = 'bv-lq').decompose()
             article.find('div', id = 'zone_banner_sponser_product').decompose()
-            article.find('p', class_ = 'linkOrigin').decompose()
-            
+            #article.find('p', class_ = 'linkOrigin').decompose()
+            article.find('div', class_ ='pgS2 txtCent grnBxBg bld clrGrn mgt20').decompose()
             article.find('div', class_ = 'block-quiz').decompose()
             article.find('div', class_ = 'podcasts-eva-t').decompose()
         except AttributeError as e:
@@ -98,14 +98,27 @@ def get_content(url):
         source_tag.string = "Nguồn: 24h.com.vn"  # Set the content of <i> tag
         # Append the <i> tag as the last child of the <article> tag
         article.append(source_tag)
-        a_tags_to_remove = article.find_all('a', class_ ="TextlinkBaiviet")
+        """a_tags_to_remove = article.find_all('a', class_ ="TextlinkBaiviet")
         for a in a_tags_to_remove:
             # Extract the text from the tag
             tag_text = a .get_text()
             # Replace the tag with its text content
             a.replace_with(tag_text)
-            a.text.strip()
+            a.text.strip()"""
+        #Handling a tag 
+        a_tags = soup.find_all('a')
+        for a_tag in a_tags:
+            # Check if the <a> tag has no child tags
+            if all(not isinstance(child, Tag) for child in a_tag.children):
+                # Convert <a> tag to its text if it has no child tags
+                a_tag.replace_with(a_tag.get_text())
+            else:
+                # If <a> tag has child elements, replace it with a <span> tag but keep the children
+                new_span = soup.new_tag("span")
+                new_span.extend(a_tag.contents)  # Use extend to add all child elements
+                a_tag.replace_with(new_span)    
         remove_div(article)
+        article.find('p', class_ = 'linkOrigin').decompose()
     except (AttributeError, IndexError, TypeError):
         try:
             article = soup.find('div', id= 'magazine_news')
@@ -193,18 +206,28 @@ def get_content(url):
                 comment.extract()
             # Append the <i> tag as the last child of the <article> tag
             article.append(source_tag)
-            a_tags_to_remove = article.find_all('a', class_ = "TextlinkBaiviet")
+            """a_tags_to_remove = article.find_all('a', class_ = "TextlinkBaiviet")
             for a in a_tags_to_remove:
                 # Extract the text from the tag
                 tag_text = a .get_text()
                 # Replace the tag with its text content
                 a.replace_with(tag_text)
-                a.text.strip()
+                a.text.strip()"""
+            #Handling a tag 
+            a_tags = soup.find_all('a')
+            for a_tag in a_tags:
+                # Check if the <a> tag has no child tags
+                if all(not isinstance(child, Tag) for child in a_tag.children):
+                    # Convert <a> tag to its text if it has no child tags
+                    a_tag.replace_with(a_tag.get_text())
+                else:
+                    # If <a> tag has child elements, replace it with a <span> tag but keep the children
+                    new_span = soup.new_tag("span")
+                    new_span.extend(a_tag.contents)  # Use extend to add all child elements
+                    a_tag.replace_with(new_span)    
                 remove_div(article)
         except AttributeError as e:
             print(e)
-    for a in article.find_all('a'):
-        a['href'] = "javascript:void(0)"
     return article
 #convert time from post to the format of output
 def convert_string(input_str):
@@ -266,7 +289,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 3*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 0*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')

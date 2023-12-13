@@ -2,7 +2,7 @@ import requests
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString, Comment
+from bs4 import BeautifulSoup,NavigableString, Comment, Tag
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
     pattern = r'\b\d{2}/\d{2}/\d{4}\b'
@@ -55,13 +55,13 @@ def remove_div(article):
 def get_content_gamek(url):
     # def get_content_autodaily()
     response = requests.get(url)
-    time.sleep(3)
     soup = BeautifulSoup(response.content, 'html.parser')
     title = soup.find('div', class_ = 'topdetail').find('h1').text.strip()
     date = soup.find('p', class_ = 'mgt15').text.strip()
     published_date = convert_string(date)
     article = soup.find('div', class_ = 'rightdetail')
-    for script_or_style in article(['script', 'style','iframe']):
+    article.find('span', id = 'hdExclusive').decompose()
+    for script_or_style in article(['script', 'style','iframe','video']):
         script_or_style.decompose()
     source_element  = article.find('div', class_ = 'link-source-wrapper is-web clearfix mb20')
     source_element.decompose()
@@ -102,19 +102,24 @@ def get_content_gamek(url):
                 del i['id']
                 del i['class']
                 del i['style']
+                del i['data-field']
+                del i['data-role']
             except AttributeError:
                 continue
             except TypeError:
                 continue
-    tags_to_remove = article.find_all(['span'])
-    for tag in tags_to_remove:
-        # Extract the text from the tag
-        tag_text = tag.get_text()
-        # Replace the tag with its text content
-        tag.replace_with(tag_text)
-        tag.text.strip()
-    for script_or_style in article(['script', 'style']):
-        script_or_style.decompose()
+    #Handling a-tag 
+    a_tags = soup.find_all('a')
+    for a_tag in a_tags:
+        # Check if the <a> tag has no child tags
+        if all(not isinstance(child, Tag) for child in a_tag.children):
+            # Convert <a> tag to its text if it has no child tags
+            a_tag.replace_with(a_tag.get_text())
+        else:
+            # If <a> tag has child elements, replace it with a <span> tag but keep the children
+            new_span = soup.new_tag("span")
+            new_span.extend(a_tag.contents)  # Use extend to add all child elements
+            a_tag.replace_with(new_span)    
     return article, title, published_date
 def get_post(url):
     try:
@@ -147,7 +152,7 @@ def get_list_url(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-2*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-0*24*3600)
     for i in range(0,len(urls)):
         try:
             published_date = get_content_gamek(urls[i])[2]
@@ -229,7 +234,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         # Replace with your actual access token
         "published_date": published_date,
         "domain":"eva"
-          # Replace with the actual category ID as required
+        #Replace with the actual category ID as required
     }
     
     # Sending the POST request
