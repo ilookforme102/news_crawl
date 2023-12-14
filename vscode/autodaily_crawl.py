@@ -126,10 +126,10 @@ def get_content_autodaily(url):
     for item in article.find_all('div'):
         if item.string =="":
             item.decompose()
+    article.find_all('strong', recursive = True)[-1].decompose()
+    # Append the <i> tag as the last child of the <article> tag
     source_tag = soup.new_tag('i') 
     source_tag.string = "Nguồn: autodaily.vn"  # Set the content of <i> tag
-    
-    # Append the <i> tag as the last child of the <article> tag
     article.append(source_tag)
     #Highlight the fist paragraph by using <strong> tag
     p_tag_1st = article.find_all('p')[0]
@@ -137,9 +137,21 @@ def get_content_autodaily(url):
     # Create a new <strong> tag with the same text
     strong_tag = soup.new_tag("strong")
     strong_tag.string = p_text
-
     # Replace the <p> tag with the <strong> tag
     p_tag_1st.replace_with(strong_tag)
+    
+    #Handling a tag 
+    a_tags = soup.find_all('a')
+    for a_tag in a_tags:
+        # Check if the <a> tag has no child tags
+        if all(not isinstance(child, Tag) for child in a_tag.children):
+            # Convert <a> tag to its text if it has no child tags
+            a_tag.replace_with(a_tag.get_text())
+        else:
+            # If <a> tag has child elements, replace it with a <span> tag but keep the children
+            new_span = soup.new_tag("span")
+            new_span.extend(a_tag.contents)  # Use extend to add all child elements
+            a_tag.replace_with(new_span)
     return article, title, published_date
 def get_post(url):
     try:
@@ -172,7 +184,8 @@ def filter_list(urls):
             date_str = soup.find('time').text.strip()
             #print(date_str)
             date_posted_norm = get_time_string(date_str)[0]
-            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            if date_posted_norm >= datetime.combine(crawl_time, datetime.min.time()):
                 filtered_urls.append(i)
                 #print(i)
         except AttributeError as e:
@@ -229,7 +242,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
+        "token": '5goalvodichcmnl',#'draftpost',#  # Replace with your actual access token
         "published_date": published_date,
         "domain":"autodaily"
           # Replace with the actual category ID as required
@@ -260,7 +273,7 @@ def main():
                 #send_post_to_5goals(title,str(content), cate_id, published_date)
                 try:
                     text_len = len(content.text)
-                    if text_len <450:
+                    if text_len <500:
                         print(content.text)
                         continue
                     else:
@@ -268,4 +281,4 @@ def main():
                 except (AttributeError,TypeError):
                     continue
 if __name__ == '__main__':
-    main()
+   main()

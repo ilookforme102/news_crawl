@@ -225,7 +225,7 @@ def get_content(url):
                     new_span = soup.new_tag("span")
                     new_span.extend(a_tag.contents)  # Use extend to add all child elements
                     a_tag.replace_with(new_span)    
-                remove_div(article)
+            remove_div(article)
         except AttributeError as e:
             print(e)
     return article
@@ -289,14 +289,15 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 0*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
         try:
             date_posted = soup.find('time').text.strip()
             date_posted_norm = convert_time_string(date_posted)
-            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            if date_posted_norm >= crawl_time:
                 filtered_urls.append(i)
                 print(i)
         except AttributeError as e:
@@ -446,7 +447,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
+        "token": '5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date
           # Replace with the actual category ID as required
     }
