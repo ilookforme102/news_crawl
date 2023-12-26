@@ -286,18 +286,109 @@ def get_post(url):
             title = ''
             published_date= ''
     return content,title,published_date
-
+def get_list_url_cntt(cate_url):
+    urls = []
+    response = requests.get(cate_url)
+    time.sleep(3)
+    soup = BeautifulSoup(response.content,'html5lib')
+    try:
+        news_block  =soup.find('section', id = 'tin_bai_noi_bat_khac').find_all('a')[:-1]
+        for i in news_block:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news =  soup.find('div', class_ = 'coll-left pos-rel').find_all('a')
+        for i in recent_news:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news2 =   soup.find('div', class_ = 'coll-right').find_all('a')
+        for i in recent_news2:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)    
+    except Exception as e:
+        print(e)
+    return urls
+def get_list_url_sao(cate_url):
+    urls = []
+    response = requests.get(cate_url)
+    time.sleep(3)
+    soup = BeautifulSoup(response.content,'html5lib')
+    try:
+        news_block  =soup.find('div', id = 'left').find_all('a')[:-1]
+        for i in news_block:
+            url = i['href']
+            if 'https://us.24h.com.vn/' in url:
+                if url not in urls:
+                    urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news =  soup.find('div', class_ = 'coll-left pos-rel').find_all('a')
+        for i in recent_news:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news2 =   soup.find('div', class_ = 'coll-right').find_all('a')
+        for i in recent_news2:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)    
+    except Exception as e:
+        print(e)
+    return urls
+def get_list_url_nguoidep(cate_url):
+    urls = []
+    response = requests.get(cate_url)
+    time.sleep(3)
+    soup = BeautifulSoup(response.content,'html5lib')
+    try:
+        news_block  =soup.find('div', class_ = 'cate-24h-foot-home-latest-list').find_all('a')[:-1]
+        for i in news_block:
+            url = i['href']
+            if 'https://us.24h.com.vn/' in url:
+                if url not in urls:
+                    urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news =  soup.find('div', class_ = 'coll-middle pos-rel').find_all('a')
+        for i in recent_news:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)
+    except Exception as e:
+        print(e)
+    try:
+        recent_news2 =   soup.find('div', class_ = 'coll-right').find_all('a')
+        for i in recent_news2:
+            url = i['href']
+            if url not in urls:
+                urls.append(url)    
+    except Exception as e:
+        print(e)
+    return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() -1*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
         try:
             date_posted = soup.find('time').text.strip()
             date_posted_norm = convert_time_string(date_posted)
-            #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
-            if date_posted_norm >= crawl_time:
+            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            #if date_posted_norm >= crawl_time:
                 filtered_urls.append(i)
                 print(i)
         except AttributeError as e:
@@ -340,9 +431,9 @@ def get_list_url(cat_url):
     return urls
 def add_list(web_24h_com_vn):
     for i in list(web_24h_com_vn['urls'].keys()):
-        for j in list(web_24h_com_vn['urls'][i]['sub-category'].keys()):
-            
-            urls = get_list_url(web_24h_com_vn['urls'][i]['sub-category'][j]['url'])
+        for j in list(web_24h_com_vn['urls'][i]['sub-category'].keys()):  
+            #urls = get_list_url(web_24h_com_vn['urls'][i]['sub-category'][j]['url'])
+            urls = web_24h_com_vn['urls'][i]['sub-category'][j]['get_list']
             print(i,j,web_24h_com_vn['urls'][i]['sub-category'][j]['url'])
             web_24h_com_vn['urls'][i]['sub-category'][j]['url_list'] = filter_list(urls)
 
@@ -357,7 +448,6 @@ def add_post(web_24h_com_vn):
                     web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['title'],web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_24h_com_vn['urls'][i]['sub-category'][j]['url_list'][u])
                     print(i,j,web_24h_com_vn['urls'][i]['cate_id'],web_24h_com_vn['urls'][i]['sub-category'][j]['name'],web_24h_com_vn['urls'][i]['sub-category'][j]['name'],web_24h_com_vn['urls'][i]['sub-category'][j]['content'][u]['title'],web_24h_com_vn['urls'][i]['sub-category'][j]['url_list'][u])
                 
-
 def get_news():
     web_24h_com_vn = {
         "home_page":"https://www.24h.com.vn/",
@@ -368,47 +458,73 @@ def get_news():
              "cate_id":57,
              "sub-category":{
                 0:{"name":"Game",
+                 "get_list": get_list_url_cntt("https://www.24h.com.vn/game-c69.html"),
                  "url":"https://www.24h.com.vn/game-c69.html"},
                 1:{"name":"Phần mềm",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/phan-mem-ngoai-c302.html"),
                  "url":"https://www.24h.com.vn/phan-mem-ngoai-c302.html"},
                 2:{"name":"Khoa học",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/khoa-hoc-c782.html"),
                  "url":"https://www.24h.com.vn/khoa-hoc-c782.html"},
                 3:{"name":"Mạng xã hội",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/mang-xa-hoi-c889.html"),
                  "url":"https://www.24h.com.vn/mang-xa-hoi-c889.html"},
-                4:{"name":"Thủ thuật - Tiện ích"
-                 ,"url":"https://www.24h.com.vn/thu-thuat-tien-ich-c68.html"},
+                4:{"name":"Thủ thuật - Tiện ích",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/thu-thuat-tien-ich-c68.html"),
+                 "url":"https://www.24h.com.vn/thu-thuat-tien-ich-c68.html"},
                 5:{"name":"Sợ Virus",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/tim-hieu-virus-c57.html"),
                  "url":"https://www.24h.com.vn/tim-hieu-virus-c57.html"},
                 6:{"name":"Máy in/phụ kiện",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/may-in/phu-kien-c291.html"),
                  "url":"https://www.24h.com.vn/may-in/phu-kien-c291.html"},
                 7:{"name":"Khám phá công nghệ",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/kham-pha-cong-nghe-c675.html"),
                  "url":"https://www.24h.com.vn/kham-pha-cong-nghe-c675.html"}
-             }
-            }
-            ,
+                     }
+                },
             "youths":
             {
             "url":"https://www.24h.com.vn/ban-tre-cuoc-song-c64.html",
             "cate_id":60,
              "sub-category":{
-                0:{"name":"Chuyện công sở","url":"https://www.24h.com.vn/chuyen-cong-so-c180.html"},
-                1:{"name":"Tình yêu - Giới Tính","url":"https://www.24h.com.vn/tinh-yeu-gioi-tinh-c306.html"},
-                2:{"name":"Ngoại tình","url":"https://www.24h.com.vn/ngoai-tinh-c435.html"},
-                3:{"name":"Giới trẻ","url":"https://www.24h.com.vn/gioi-tre-c434.html"},
-                4:{"name":"Hotgirl - Hotboy","url":"https://www.24h.com.vn/hotgirl-hot-boy-c64e3398.html"},
-                5:{"name":"Nhịp sống trẻ","url":"https://www.24h.com.vn/nhip-song-tre-c685.html"}
+                0:{"name":"Chuyện công sở",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/chuyen-cong-so-c180.html"),
+                   "url":"https://www.24h.com.vn/chuyen-cong-so-c180.html"},
+                1:{"name":"Tình yêu - Giới Tính",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/tinh-yeu-gioi-tinh-c306.html"),
+                   "url":"https://www.24h.com.vn/tinh-yeu-gioi-tinh-c306.html"},
+                2:{"name":"Ngoại tình",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/ngoai-tinh-c435.html"),
+                   "url":"https://www.24h.com.vn/ngoai-tinh-c435.html"},
+                3:{"name":"Giới trẻ",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/gioi-tre-c434.html"),
+                   "url":"https://www.24h.com.vn/gioi-tre-c434.html"},
+                4:{"name":"Hotgirl - Hotboy",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/hotgirl-hot-boy-c64e3398.html"),
+                   "url":"https://www.24h.com.vn/hotgirl-hot-boy-c64e3398.html"},
+                5:{"name":"Nhịp sống trẻ",
+                   "get_list": get_list_url_cntt("https://www.24h.com.vn/nhip-song-tre-c685.html"),
+                   "url":"https://www.24h.com.vn/nhip-song-tre-c685.html"}
              }
-            }
-            ,
+            },
             "showbiz":
             {
             "cate_id":59,
             "url":"https://www.24h.com.vn/doi-song-showbiz-c729.html",
              "sub-category":{
-                0:{"name":"Sao Việt","url":"https://www.24h.com.vn/sao-viet-c757.html"},
-                1:{"name":"24h gặp gỡ","url":"https://www.24h.com.vn/gap-go-24h-c729e6820.html"},
-                2:{"name":"Talk với sao","url":"https://www.24h.com.vn/doi-thoai-cung-sao-c730.html"},
-                3:{"name":"Sao châu Á","url":"https://www.24h.com.vn/sao-chau-a-c759.html"},
+                0:{"name":"Sao Việt",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/sao-viet-c757.html"),
+                   "url":"https://www.24h.com.vn/sao-viet-c757.html"},
+                1:{"name":"24h gặp gỡ",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/gap-go-24h-c729e6820.html"),
+                   "url":"https://www.24h.com.vn/gap-go-24h-c729e6820.html"},
+                2:{"name":"Talk với sao",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/doi-thoai-cung-sao-c730.html"),
+                   "url":"https://www.24h.com.vn/doi-thoai-cung-sao-c730.html"},
+                3:{"name":"Sao châu Á",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/sao-chau-a-c759.html"),
+                   "url":"https://www.24h.com.vn/sao-chau-a-c759.html"},
             }
             },
             "cars":
@@ -416,24 +532,35 @@ def get_news():
             "cate_id":58,
             "url":"https://www.24h.com.vn/o-to-c747.html",
              "sub-category":{
-                0:{"name":"Tin tức ô tô","url":"https://www.24h.com.vn/tin-tuc-o-to-c332.html"},
-                1:{"name":"Bảng giá xe ô tô","url":"https://www.24h.com.vn/bang-gia-xe-o-to-c807.html"},
-                2:{"name":"Tư vấn","url":"https://www.24h.com.vn/tu-van-c240.html"},
-                3:{"name":"Ngắm xe","url":"https://www.24h.com.vn/anh-nguoi-dep-va-xe-c199.html"},
-                4:{"name":"Đánh giá xe","url":"https://www.24h.com.vn/so-sanh-xe-c805.html"},
+                0:{"name":"Tin tức ô tô",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/tin-tuc-o-to-c332.html"),
+                   "url":"https://www.24h.com.vn/tin-tuc-o-to-c332.html"},
+                1:{"name":"Bảng giá xe ô tô",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/bang-gia-xe-o-to-c807.html"),
+                   "url":"https://www.24h.com.vn/bang-gia-xe-o-to-c807.html"},
+                2:{"name":"Tư vấn",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/tu-van-c240.html"),
+                   "url":"https://www.24h.com.vn/tu-van-c240.html"},
+                3:{"name":"Ngắm xe",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/anh-nguoi-dep-va-xe-c199.html"),
+                   "url":"https://www.24h.com.vn/anh-nguoi-dep-va-xe-c199.html"},
+                4:{"name":"Đánh giá xe",
+                   "get_list": get_list_url_sao("https://www.24h.com.vn/so-sanh-xe-c805.html"),
+                   "url":"https://www.24h.com.vn/so-sanh-xe-c805.html"},
             }
             },
-            
             "người đẹp":
             {
             "cate_id":63,
             "url":"https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html#",
              "sub-category":{
-                0:{"name":"người đẹp thể thao","url":"https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html"}
+                0:{"name":"người đẹp thể thao",
+                   "get_list": get_list_url_nguoidep("https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html"),                   
+                   "url":"https://www.24h.com.vn/hau-truong-ngoi-sao-the-thao-c797.html"}
             }
             }
-        }
-    }
+            
+    }}
 #
     add_list(web_24h_com_vn)
     add_post(web_24h_com_vn)

@@ -152,7 +152,7 @@ def get_list_url(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-0*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-1*24*3600)
     for i in range(0,len(urls)):
         try:
             published_date = get_content_gamek(urls[i])[2]
