@@ -245,7 +245,7 @@ def get_post(url):
 
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() - 2*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() - 1*24*3600)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
