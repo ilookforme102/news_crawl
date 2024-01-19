@@ -2,7 +2,7 @@ import requests
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString, Comment
+from bs4 import BeautifulSoup,NavigableString, Comment, Tag
 import lxml
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
@@ -50,16 +50,6 @@ def get_content_vnexpress(url):
         article.find('ul', class_ = 'list-news hidden').decompose()
     except AttributeError as e:
         print(e)
-    for i in article.findAll(attrs={"style" : "display: none; height: 0;"}, recursive= True):
-        try:
-            i.decompose()
-        except Exception:
-            continue
-    for i in article.findAll(attrs={"style":"display:none;"}):
-        try:
-            i.decompose()
-        except Exception:
-            continue
     strong_tag = soup.new_tag('strong') 
     strong_tag.string = first_paragraph.text # Set the content of <i> tag
     
@@ -86,6 +76,7 @@ def get_content_vnexpress(url):
     img_list = article.find_all('img')
     n_img = len(img_list)
     for i in range(0,n_img):
+           
         caption_start = NavigableString("[caption id=\"\" align=\"aligncenter\" width=\"800\"]")
         try:
             caption_text = NavigableString(caption_text_list[i].get_text())
@@ -179,7 +170,8 @@ def filter_list(urls_dict):
     for i in range(0,len(urls_dict)):
         try:
             date_posted_norm = get_datetime_obj(urls_dict[i]['date'])[0]
-            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            if date_posted_norm >= datetime.combine(crawl_time, datetime.min.time()):
                 filtered_urls.append(urls_dict[i]['link'])
                 #print(i)
         except AttributeError as e:
@@ -204,8 +196,11 @@ def add_post(web_json_obj):
             for u in list_key:
                 web_json_obj['urls'][i]['sub-category'][j]['content'][u] = {}
                 if u != "":
-                    web_json_obj['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
-                    print(i,j,web_json_obj['urls'][i]['sub-category'][j]['cate_id'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
+                    try:
+                        web_json_obj['urls'][i]['sub-category'][j]['content'][u]['text'] ,web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['published_date'] = get_post(web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
+                        print(i,j,web_json_obj['urls'][i]['sub-category'][j]['cate_id'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['name'],web_json_obj['urls'][i]['sub-category'][j]['content'][u]['title'],web_json_obj['urls'][i]['sub-category'][j]['url_list'][u])
+                    except TypeError as e:
+                        print(e)
 #add all necessary information to json object
 def get_news_vnexpress():
     _vnexpress= {
@@ -237,7 +232,7 @@ def send_post_to_5goals(title,content,category_id,published_date):
         "title": title,
         "content": content,
         "category_id": category_id,
-        "token": 'draftpost',#'5goalvodichcmnl',  # Replace with your actual access token
+        "token": '5goalvodichcmnl',  # Replace with your actual access token
         "published_date": published_date,
         "domain":"vnexpress"
           # Replace with the actual category ID as required
@@ -259,14 +254,16 @@ def main():
             url_list =  _vnexpress['urls'][i]['sub-category'][j]['url_list']
             print(url_list)
             for t in range(0,len(url_list)):
-                content = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['text']
-                title = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['title']
-                published_date = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['published_date']
-                cate_id = _vnexpress['urls'][i]['sub-category'][j]['cate_id']
-                
+                try:
+                    content = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['text']
+                    title = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['title']
+                    published_date = _vnexpress['urls'][i]['sub-category'][j]['content'][t]['published_date']
+                    cate_id = _vnexpress['urls'][i]['sub-category'][j]['cate_id']
+                except KeyError:
+                    continue
                 try:
                     text_len = len(content.text)
-                    if text_len <450:
+                    if text_len <400:
                         print(content.text)
                         continue
                     else:

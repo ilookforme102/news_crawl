@@ -3,7 +3,7 @@ import requests
 import time
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup,NavigableString#, Comment
+from bs4 import BeautifulSoup,NavigableString, Tag#, Comment
 def convert_string(input_str):
     # Regular expression pattern to match a date in the format dd-mm-yyyy
     pattern = r'\b\d{2}/\d{2}/\d{4}\b'
@@ -63,13 +63,13 @@ def get_content_autodaily(url):
     for i in author_item:
         i.decompose()
     caption_text_list = article.find_all('em')
-    tags_to_remove = article.find_all(['a', 'span'])
+    tags_to_remove = article.find_all(['a'])
     for tag in tags_to_remove:
-        # Extract the text from the tag
+        """# Extract the text from the tag
         tag_text = tag.get_text()
         # Replace the tag with its text content
         tag.replace_with(tag_text)
-        tag.text.strip()
+        tag.text.strip()"""
     #for i in article.find_all('img'):
         #i.attrs = ['class', 'alt', 'src', 'data-original']
         #del i['onclick']
@@ -79,9 +79,9 @@ def get_content_autodaily(url):
     #remove all image attributes except somes from list
     list_attr = ['src','alt','data-src']
     for i in article.find_all('img'):
-        for j in list(i.attrs.keys()):
-            if j not in list_attr:
-                i.attrs.pop(j)
+        attrs_to_remove = [attr for attr in i.attrs if attr not in list_attr]
+        for attr in attrs_to_remove:
+            del i[attr]
     img_list = article.find_all('img')
     n_img = len(img_list)
     #print(len(caption_text_list))
@@ -126,7 +126,10 @@ def get_content_autodaily(url):
     for item in article.find_all('div'):
         if item.string =="":
             item.decompose()
-    article.find_all('strong', recursive = True)[-1].decompose()
+    try:
+        article.find_all('strong', recursive = True)[-1].decompose()
+    except IndexError as e:
+        print(e)
     # Append the <i> tag as the last child of the <article> tag
     source_tag = soup.new_tag('i') 
     source_tag.string = "Nguồn: autodaily.vn"  # Set the content of <i> tag
@@ -165,14 +168,20 @@ def get_list_url(cate_url):
     soup = BeautifulSoup(response.content, 'html.parser')
     featured_posts = soup.find('ul', class_ = 'late-news-lst')
     list = featured_posts.find_all('li', class_ = 'clearfix')
+    new_news = soup.find('ul',class_ = 'sub-news clearfix').find_all('li')
+    news_big = soup.find('div',class_ = 'news-big').find('a',class_ = 'news-link')
     urls = []
+    for i in new_news:
+        url = i.find('a')['href']
+        urls.append(url)
     for i in list:
         url = i.find('a')['href']
         urls.append(url)
+    urls.append(news_big['href'])
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time()-1*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time()-3*24*3600)
     for i in urls:
         response = requests.get(i)
         time.sleep(2)
@@ -183,9 +192,9 @@ def filter_list(urls):
             #date_posted_norm = convert_time_string(date_posted)
             date_str = soup.find('time').text.strip()
             #print(date_str)
-            date_posted_norm = get_time_string(date_str)[0]
+            date_posted_norm = datetime.strptime(date_str, '%d/%m/%Y')
             #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
-            if date_posted_norm >= datetime.combine(crawl_time, datetime.min.time()):
+            if date_posted_norm >= crawl_time:
                 filtered_urls.append(i)
                 #print(i)
         except AttributeError as e:
@@ -281,4 +290,4 @@ def main():
                 except (AttributeError,TypeError):
                     continue
 if __name__ == '__main__':
-   main()
+    main()

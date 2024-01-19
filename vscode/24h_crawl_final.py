@@ -15,7 +15,7 @@ def remove_div(article):
         div.decompose()
 def get_content(url):
     response = requests.get(url)
-    time.sleep(3)
+    time.sleep(5)
     soup = BeautifulSoup(response.content,  'html.parser')
     try:
         article = soup.find('article', class_ = 'cate-24h-foot-arti-deta-info')
@@ -254,12 +254,12 @@ def convert_time_string(posted_date):
         datetime_obj = datetime.strptime(date_string, "%d/%m/%Y")
         return datetime_obj
     else:
-        return ''
+        return datetime.fromtimestamp(time.time() -0*24*3600).replace(hour=0, minute=0, second=0, microsecond=0)
 
 def get_post(url):
     try:
         response = requests.get(url)
-        time.sleep(3)
+        time.sleep(5)
         soup = BeautifulSoup(response.content, 'html5lib')
         content = get_content(url)
         post_time = soup.find('time', class_ = 'cate-24h-foot-arti-deta-cre-post').text.strip()
@@ -274,7 +274,7 @@ def get_post(url):
     except AttributeError:
         try:
             response = requests.get(url)
-            time.sleep(3)
+            time.sleep(5)
             soup = BeautifulSoup(response.content, 'html5lib')
             content = get_content(url)
             post_time = soup.find('div', class_ = 'magazine_event_date').text.strip()
@@ -289,7 +289,7 @@ def get_post(url):
 def get_list_url_cntt(cate_url):
     urls = []
     response = requests.get(cate_url)
-    time.sleep(3)
+    time.sleep(5)
     soup = BeautifulSoup(response.content,'html5lib')
     try:
         news_block  =soup.find('section', id = 'tin_bai_noi_bat_khac').find_all('a')[:-1]
@@ -319,7 +319,7 @@ def get_list_url_cntt(cate_url):
 def get_list_url_sao(cate_url):
     urls = []
     response = requests.get(cate_url)
-    time.sleep(3)
+    time.sleep(5)
     soup = BeautifulSoup(response.content,'html5lib')
     try:
         news_block  =soup.find('div', id = 'left').find_all('a')[:-1]
@@ -350,7 +350,7 @@ def get_list_url_sao(cate_url):
 def get_list_url_nguoidep(cate_url):
     urls = []
     response = requests.get(cate_url)
-    time.sleep(3)
+    time.sleep(5)
     soup = BeautifulSoup(response.content,'html5lib')
     try:
         news_block  =soup.find('div', class_ = 'cate-24h-foot-home-latest-list').find_all('a')[:-1]
@@ -380,15 +380,16 @@ def get_list_url_nguoidep(cate_url):
     return urls
 def filter_list(urls):
     filtered_urls = []
-    crawl_time = datetime.fromtimestamp(time.time() -2*24*3600)
+    crawl_time = datetime.fromtimestamp(time.time() -0*24*3600).replace(hour=0, minute=0, second=0, microsecond=0)
     for i in urls:
         response = requests.get(i)
         soup = BeautifulSoup(response.content, 'html5lib')
         try:
             date_posted = soup.find('time').text.strip()
             date_posted_norm = convert_time_string(date_posted)
-            if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
-            #if date_posted_norm >= crawl_time:
+            #if ( (date_posted_norm.day == crawl_time.day) and (date_posted_norm.month == crawl_time.month) and (date_posted_norm.year == crawl_time.year) ):
+            if date_posted_norm >= crawl_time:
+
                 filtered_urls.append(i)
                 print(i)
         except AttributeError as e:
@@ -398,7 +399,7 @@ def filter_list(urls):
 def get_list_url(cat_url):
     urls = []
     response = requests.get(cat_url)
-    time.sleep(3)
+    time.sleep(5)
     soup = BeautifulSoup(response.content,'html5lib')
     try:
         news_block  = soup.find('section', id = 'tin_bai_noi_bat_khac')
